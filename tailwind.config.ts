@@ -47,6 +47,21 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        teams: {
+          blue: "hsl(var(--teams-blue))",
+          "blue-light": "hsl(var(--teams-blue-light))",
+          purple: "hsl(var(--teams-purple))",
+          gray: "hsl(var(--teams-gray))",
+          "gray-light": "hsl(var(--teams-gray-light))",
+          success: "hsl(var(--teams-success))",
+          warning: "hsl(var(--teams-warning))",
+        },
+        status: {
+          high: "hsl(var(--status-high))",
+          medium: "hsl(var(--status-medium))",
+          low: "hsl(var(--status-low))",
+          completed: "hsl(var(--status-completed))",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
