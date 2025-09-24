@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Edit, Save, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface ActionItem {
   id: string;
@@ -60,9 +62,50 @@ interface ActionItemsTabProps {
 }
 
 export function ActionItemsTab({ meetingId }: ActionItemsTabProps) {
-  const [actionItems, setActionItems] = useState<ActionItem[]>(dummyActionItems);
+  const [actionItems, setActionItems] = useState<ActionItem[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<ActionItem>>({});
+  const { toast } = useToast();
+
+  // Load action items from database
+  useEffect(() => {
+    loadActionItems();
+  }, [meetingId]);
+
+  const loadActionItems = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('action_items')
+        .select('*')
+        .eq('meeting_id', meetingId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error loading action items:', error);
+        // Fall back to dummy data if there's an error
+        setActionItems(dummyActionItems);
+        return;
+      }
+
+      // Transform database records to ActionItem format
+      const transformedItems: ActionItem[] = data.map(item => ({
+        id: item.id,
+        actionItem: item.action_item,
+        category: item.category || '',
+        priority: item.priority as ActionItem["priority"] || 'Medium',
+        status: item.status as ActionItem["status"] || 'To Do',
+        dueDate: item.due_date || '',
+        remarks: item.remarks || '',
+        additionalInfo: item.additional_info || '',
+        assignedTo: item.assigned_to || ''
+      }));
+
+      setActionItems(transformedItems.length > 0 ? transformedItems : dummyActionItems);
+    } catch (error) {
+      console.error('Error loading action items:', error);
+      setActionItems(dummyActionItems);
+    }
+  };
 
   const getPriorityColor = (priority: ActionItem["priority"]) => {
     switch (priority) {

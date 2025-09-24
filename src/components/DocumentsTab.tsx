@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Upload, FileText, Download, Eye, Search, Loader } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { extractTextFromFile, createTextChunks, DataChunk } from "@/lib/documentProcessor";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Document {
   id: string;
@@ -78,6 +79,24 @@ export function DocumentsTab({ meetingId, onDataChunksGenerated }: DocumentsTabP
       try {
         // Check if file is Word or PDF
         if (file.name.endsWith('.docx') || file.name.endsWith('.doc') || file.name.endsWith('.pdf') || file.type === 'application/pdf') {
+          // Upload file to Supabase storage
+          const fileExt = file.name.split('.').pop();
+          const filePath = `temp-user-id/${meetingId}/${Date.now()}-${file.name}`;
+          
+          const { error: uploadError } = await supabase.storage
+            .from('meeting-documents')
+            .upload(filePath, file);
+
+          if (uploadError) {
+            console.error('Upload error:', uploadError);
+            toast({
+              title: "Upload failed",
+              description: `Failed to upload ${file.name}: ${uploadError.message}`,
+              variant: "destructive"
+            });
+            continue;
+          }
+
           const newDoc: Document = {
             id: Date.now().toString() + Math.random(),
             name: file.name,
@@ -97,13 +116,35 @@ export function DocumentsTab({ meetingId, onDataChunksGenerated }: DocumentsTabP
             });
             
             const extractedText = await extractTextFromFile(file);
-            const chunks = createTextChunks(extractedText, file.name);
+            const chunks = createTextChunks(extractedText, file.name).map(chunk => ({
+              ...chunk,
+              file_path: filePath
+            }));
+            
+            // Send chunks to edge function for processing
+            const { error: processError } = await supabase.functions.invoke('process-document', {
+              body: {
+                chunks,
+                meetingId,
+                userId: 'temp-user-id' // TODO: Replace with actual user ID when auth is implemented
+              }
+            });
+
+            if (processError) {
+              console.error('Process error:', processError);
+              toast({
+                title: "Processing failed",
+                description: `Failed to process ${file.name}: ${processError.message}`,
+                variant: "destructive"
+              });
+              continue;
+            }
             
             onDataChunksGenerated(chunks);
             
             toast({
               title: "Document processed successfully",
-              description: `${file.name} uploaded and ${chunks.length} text chunks generated.`
+              description: `${file.name} uploaded and ${chunks.length} text chunks generated with action items.`
             });
           } catch (error) {
             console.error('Error processing document:', error);
