@@ -53,8 +53,8 @@ serve(async (req) => {
       try {
         console.log(`Processing chunk ${i + 1}/${chunks.length} from ${chunk.sourceDocument || 'unknown'}`);
         
-        // Only save to database if meetingId is a valid UUID
-        if (isValidUUID && chunk.text && chunk.sourceDocument) {
+        // Save data chunks to database if we have meetingId and chunk data
+        if (meetingId && chunk.text && chunk.sourceDocument) {
           const { error: chunkError } = await supabase
             .from('data_chunks')
             .insert({
@@ -142,8 +142,8 @@ serve(async (req) => {
       }
     }
 
-    // Save all action items to database if we have a valid UUID
-    if (allActionItems.length > 0 && isValidUUID) {
+    // Save all action items to database if we have action items and meetingId
+    if (allActionItems.length > 0 && meetingId) {
       const actionItemsToInsert = allActionItems.map(item => ({
         user_id: userId || 'demo-user',
         meeting_id: meetingId,
