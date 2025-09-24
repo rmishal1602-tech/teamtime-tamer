@@ -58,26 +58,43 @@ async function extractTextFromPDF(file: File): Promise<string> {
   }
 }
 
-export function createTextChunks(text: string, sourceDocument: string, chunkSize: number = 1000): DataChunk[] {
+export function createTextChunks(text: string, sourceDocument: string, chunkSize: number = 400): DataChunk[] {
   const chunks: DataChunk[] = [];
   const cleanText = text.replace(/\s+/g, ' ').trim();
-
-  for (let i = 0; i < cleanText.length; i += chunkSize) {
-    let chunkText = cleanText.slice(i, i + chunkSize);
-    
-    // Try to break at word boundaries to avoid cutting words in half
-    if (i + chunkSize < cleanText.length && chunkText.length === chunkSize) {
-      const lastSpaceIndex = chunkText.lastIndexOf(' ');
-      if (lastSpaceIndex > chunkSize * 0.8) { // Only break if we don't lose too much text
-        chunkText = chunkText.slice(0, lastSpaceIndex);
-      }
+  
+  // Split text into sentences
+  const sentences = cleanText.split(/(?<=[.!?])\s+/).filter(sentence => sentence.trim().length > 0);
+  
+  let currentChunk = '';
+  let chunkIndex = 0;
+  
+  for (const sentence of sentences) {
+    // If adding this sentence would exceed chunk size and we already have content
+    if (currentChunk.length > 0 && (currentChunk + ' ' + sentence).length > chunkSize) {
+      // Save current chunk
+      chunks.push({
+        id: `chunk-${Date.now()}-${chunkIndex}`,
+        text: currentChunk.trim(),
+        sourceDocument,
+        chunkIndex,
+        createdAt: new Date().toISOString()
+      });
+      
+      chunkIndex++;
+      currentChunk = sentence;
+    } else {
+      // Add sentence to current chunk
+      currentChunk = currentChunk.length > 0 ? currentChunk + ' ' + sentence : sentence;
     }
-
+  }
+  
+  // Add the last chunk if it has content
+  if (currentChunk.trim().length > 0) {
     chunks.push({
-      id: `chunk-${Date.now()}-${i}`,
-      text: chunkText.trim(),
+      id: `chunk-${Date.now()}-${chunkIndex}`,
+      text: currentChunk.trim(),
       sourceDocument,
-      chunkIndex: Math.floor(i / chunkSize),
+      chunkIndex,
       createdAt: new Date().toISOString()
     });
   }
