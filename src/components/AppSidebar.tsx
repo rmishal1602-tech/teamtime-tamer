@@ -153,13 +153,13 @@ export function AppSidebar({ selectedMeetingId, onMeetingSelect }: AppSidebarPro
                               onClick={() => onMeetingSelect(meeting.id)}
                               className="w-full justify-start text-left"
                             >
-                              <div className="flex-1 min-w-0">
-                                {isCollapsed ? (
-                                  <div className="flex items-center justify-center">
-                                    <StatusIcon className="w-4 h-4" />
-                                  </div>
-                                ) : (
-                                  <>
+                              {isCollapsed ? (
+                                <div className="flex items-center justify-center w-full">
+                                  <StatusIcon className="w-4 h-4" />
+                                </div>
+                              ) : (
+                                <div className="flex items-center w-full">
+                                  <div className="flex-1 min-w-0">
                                     <div className="flex items-start justify-between mb-1">
                                       <h3 className="font-medium text-sm truncate pr-2">
                                         {meeting.title}
@@ -188,10 +188,10 @@ export function AppSidebar({ selectedMeetingId, onMeetingSelect }: AppSidebarPro
                                         <span>{meeting.participant_count} participants</span>
                                       </div>
                                     </div>
-                                  </>
-                                )}
-                              </div>
-                              {!isCollapsed && <ChevronRight className="h-4 w-4 opacity-50" />}
+                                  </div>
+                                  <ChevronRight className="h-4 w-4 opacity-50 ml-2" />
+                                </div>
+                              )}
                             </Button>
                           </SidebarMenuButton>
                         </SidebarMenuItem>
@@ -229,13 +229,13 @@ export function AppSidebar({ selectedMeetingId, onMeetingSelect }: AppSidebarPro
                               onClick={() => onMeetingSelect(meeting.id)}
                               className="w-full justify-start text-left"
                             >
-                              <div className="flex-1 min-w-0">
-                                {isCollapsed ? (
-                                  <div className="flex items-center justify-center">
-                                    <StatusIcon className="w-4 h-4" />
-                                  </div>
-                                ) : (
-                                  <>
+                              {isCollapsed ? (
+                                <div className="flex items-center justify-center w-full">
+                                  <StatusIcon className="w-4 h-4" />
+                                </div>
+                              ) : (
+                                <div className="flex items-center w-full">
+                                  <div className="flex-1 min-w-0">
                                     <div className="flex items-start justify-between mb-1">
                                       <h3 className="font-medium text-sm truncate pr-2">
                                         {meeting.title}
@@ -264,10 +264,10 @@ export function AppSidebar({ selectedMeetingId, onMeetingSelect }: AppSidebarPro
                                         <span>{meeting.participant_count} participants</span>
                                       </div>
                                     </div>
-                                  </>
-                                )}
-                              </div>
-                              {!isCollapsed && <ChevronRight className="h-4 w-4 opacity-50" />}
+                                  </div>
+                                  <ChevronRight className="h-4 w-4 opacity-50 ml-2" />
+                                </div>
+                              )}
                             </Button>
                           </SidebarMenuButton>
                         </SidebarMenuItem>
