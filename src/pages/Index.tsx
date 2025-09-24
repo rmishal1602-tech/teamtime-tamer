@@ -1,10 +1,8 @@
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { Menu } from "lucide-react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { MainContent } from "@/components/MainContent";
-import { Button } from "@/components/ui/button";
 
 const Index = () => {
   const { meetingId } = useParams<{ meetingId?: string }>();
@@ -36,11 +34,7 @@ const Index = () => {
         
         <div className="flex-1 flex flex-col">
           <header className="h-12 flex items-center border-b bg-white/50 backdrop-blur-sm">
-            <SidebarTrigger asChild>
-              <Button variant="ghost" size="sm" className="ml-2">
-                <Menu className="h-4 w-4" />
-              </Button>
-            </SidebarTrigger>
+            <SidebarTrigger className="ml-2" />
           </header>
           
           <main className="flex-1">

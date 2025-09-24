@@ -142,57 +142,51 @@ export function AppSidebar({ selectedMeetingId, onMeetingSelect }: AppSidebarPro
                       return (
                         <SidebarMenuItem key={meeting.id}>
                           <SidebarMenuButton 
-                            asChild
                             className={cn(
                               "h-auto p-3 hover:bg-muted/50",
                               selectedMeetingId === meeting.id && "bg-accent text-accent-foreground border-l-4 border-blue-600"
                             )}
+                            onClick={() => onMeetingSelect(meeting.id)}
                           >
-                            <Button
-                              variant="ghost"
-                              onClick={() => onMeetingSelect(meeting.id)}
-                              className="w-full justify-start text-left"
-                            >
-                              {isCollapsed ? (
-                                <div className="flex items-center justify-center w-full">
-                                  <StatusIcon className="w-4 h-4" />
-                                </div>
-                              ) : (
-                                <div className="flex items-center w-full">
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-start justify-between mb-1">
-                                      <h3 className="font-medium text-sm truncate pr-2">
-                                        {meeting.title}
-                                      </h3>
-                                      <div className="flex items-center gap-1">
-                                        <StatusIcon className="w-3 h-3 text-muted-foreground" />
-                                        <div className={cn("w-2 h-2 rounded-full", getStatusDot(meeting.status))} />
-                                      </div>
-                                    </div>
-                                    
-                                    <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
-                                      {meeting.description}
-                                    </p>
-                                    
-                                    <div className="space-y-1">
-                                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                        <Calendar className="h-3 w-3" />
-                                        <span>{date}</span>
-                                      </div>
-                                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                        <Clock className="h-3 w-3" />
-                                        <span>{time}</span>
-                                      </div>
-                                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                        <Users className="h-3 w-3" />
-                                        <span>{meeting.participant_count} participants</span>
-                                      </div>
+                            {isCollapsed ? (
+                              <div className="flex items-center justify-center w-full">
+                                <StatusIcon className="w-4 h-4" />
+                              </div>
+                            ) : (
+                              <div className="flex items-center w-full">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-start justify-between mb-1">
+                                    <h3 className="font-medium text-sm truncate pr-2">
+                                      {meeting.title}
+                                    </h3>
+                                    <div className="flex items-center gap-1">
+                                      <StatusIcon className="w-3 h-3 text-muted-foreground" />
+                                      <div className={cn("w-2 h-2 rounded-full", getStatusDot(meeting.status))} />
                                     </div>
                                   </div>
-                                  <ChevronRight className="h-4 w-4 opacity-50 ml-2" />
+                                  
+                                  <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
+                                    {meeting.description}
+                                  </p>
+                                  
+                                  <div className="space-y-1">
+                                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                      <Calendar className="h-3 w-3" />
+                                      <span>{date}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                      <Clock className="h-3 w-3" />
+                                      <span>{time}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                      <Users className="h-3 w-3" />
+                                      <span>{meeting.participant_count} participants</span>
+                                    </div>
+                                  </div>
                                 </div>
-                              )}
-                            </Button>
+                                <ChevronRight className="h-4 w-4 opacity-50 ml-2" />
+                              </div>
+                            )}
                           </SidebarMenuButton>
                         </SidebarMenuItem>
                       );
@@ -218,57 +212,51 @@ export function AppSidebar({ selectedMeetingId, onMeetingSelect }: AppSidebarPro
                       return (
                         <SidebarMenuItem key={meeting.id}>
                           <SidebarMenuButton 
-                            asChild
                             className={cn(
                               "h-auto p-3 hover:bg-muted/50",
                               selectedMeetingId === meeting.id && "bg-accent text-accent-foreground border-l-4 border-blue-600"
                             )}
+                            onClick={() => onMeetingSelect(meeting.id)}
                           >
-                            <Button
-                              variant="ghost"
-                              onClick={() => onMeetingSelect(meeting.id)}
-                              className="w-full justify-start text-left"
-                            >
-                              {isCollapsed ? (
-                                <div className="flex items-center justify-center w-full">
-                                  <StatusIcon className="w-4 h-4" />
-                                </div>
-                              ) : (
-                                <div className="flex items-center w-full">
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-start justify-between mb-1">
-                                      <h3 className="font-medium text-sm truncate pr-2">
-                                        {meeting.title}
-                                      </h3>
-                                      <div className="flex items-center gap-1">
-                                        <StatusIcon className="w-3 h-3 text-muted-foreground" />
-                                        <div className={cn("w-2 h-2 rounded-full", getStatusDot(meeting.status))} />
-                                      </div>
-                                    </div>
-                                    
-                                    <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
-                                      {meeting.description}
-                                    </p>
-                                    
-                                    <div className="space-y-1">
-                                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                        <Calendar className="h-3 w-3" />
-                                        <span>{date}</span>
-                                      </div>
-                                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                        <Clock className="h-3 w-3" />
-                                        <span>{time}</span>
-                                      </div>
-                                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                        <Users className="h-3 w-3" />
-                                        <span>{meeting.participant_count} participants</span>
-                                      </div>
+                            {isCollapsed ? (
+                              <div className="flex items-center justify-center w-full">
+                                <StatusIcon className="w-4 h-4" />
+                              </div>
+                            ) : (
+                              <div className="flex items-center w-full">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-start justify-between mb-1">
+                                    <h3 className="font-medium text-sm truncate pr-2">
+                                      {meeting.title}
+                                    </h3>
+                                    <div className="flex items-center gap-1">
+                                      <StatusIcon className="w-3 h-3 text-muted-foreground" />
+                                      <div className={cn("w-2 h-2 rounded-full", getStatusDot(meeting.status))} />
                                     </div>
                                   </div>
-                                  <ChevronRight className="h-4 w-4 opacity-50 ml-2" />
+                                  
+                                  <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
+                                    {meeting.description}
+                                  </p>
+                                  
+                                  <div className="space-y-1">
+                                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                      <Calendar className="h-3 w-3" />
+                                      <span>{date}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                      <Clock className="h-3 w-3" />
+                                      <span>{time}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                      <Users className="h-3 w-3" />
+                                      <span>{meeting.participant_count} participants</span>
+                                    </div>
+                                  </div>
                                 </div>
-                              )}
-                            </Button>
+                                <ChevronRight className="h-4 w-4 opacity-50 ml-2" />
+                              </div>
+                            )}
                           </SidebarMenuButton>
                         </SidebarMenuItem>
                       );
