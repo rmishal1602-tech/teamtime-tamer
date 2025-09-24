@@ -14,7 +14,139 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      action_items: {
+        Row: {
+          action_item: string
+          additional_info: string | null
+          assigned_to: string | null
+          category: string | null
+          created_at: string
+          due_date: string | null
+          id: string
+          meeting_id: string
+          priority: string | null
+          remarks: string | null
+          status: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          action_item: string
+          additional_info?: string | null
+          assigned_to?: string | null
+          category?: string | null
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          meeting_id: string
+          priority?: string | null
+          remarks?: string | null
+          status?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          action_item?: string
+          additional_info?: string | null
+          assigned_to?: string | null
+          category?: string | null
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          meeting_id?: string
+          priority?: string | null
+          remarks?: string | null
+          status?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "action_items_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      data_chunks: {
+        Row: {
+          chunk_index: number
+          created_at: string
+          file_path: string | null
+          id: string
+          meeting_id: string
+          source_document: string
+          text: string
+          user_id: string
+        }
+        Insert: {
+          chunk_index: number
+          created_at?: string
+          file_path?: string | null
+          id?: string
+          meeting_id: string
+          source_document: string
+          text: string
+          user_id: string
+        }
+        Update: {
+          chunk_index?: number
+          created_at?: string
+          file_path?: string | null
+          id?: string
+          meeting_id?: string
+          source_document?: string
+          text?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "data_chunks_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meetings: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          meeting_date: string | null
+          participant_count: number | null
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          meeting_date?: string | null
+          participant_count?: number | null
+          status?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          meeting_date?: string | null
+          participant_count?: number | null
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
