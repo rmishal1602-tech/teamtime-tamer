@@ -122,11 +122,12 @@ export function DocumentsTab({ meetingId, onDataChunksGenerated }: DocumentsTabP
             }));
             
             // Send chunks to edge function for processing
+            const userId = crypto.randomUUID();
             const { data: processResult, error: processError } = await supabase.functions.invoke('process-document', {
               body: {
                 chunks,
                 meetingId,
-                userId: 'demo-user-id'
+                userId
               }
             });
 
