@@ -103,8 +103,8 @@ export function AppSidebar({ selectedMeetingId, onMeetingSelect }: AppSidebarPro
           </div>
           {!isCollapsed && (
             <div>
-              <h1 className="text-xl font-semibold text-foreground">Teams Meetings</h1>
-              <p className="text-sm text-muted-foreground">Manage your meetings</p>
+              <h1 className="text-xl font-semibold text-foreground">Project Compass</h1>
+              <p className="text-sm text-muted-foreground">Meeting Action Tracker</p>
             </div>
           )}
         </div>
