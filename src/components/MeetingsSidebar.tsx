@@ -1,59 +1,18 @@
-import { Calendar, Users, Clock, Video } from "lucide-react";
+import { Calendar, Users, Clock, Video, CheckCircle, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Meeting {
   id: string;
   title: string;
-  date: string;
-  time: string;
-  participants: number;
-  status: "upcoming" | "completed" | "in-progress";
+  description: string;
+  meeting_date: string;
+  status: string;
+  participant_count: number;
 }
-
-const dummyMeetings: Meeting[] = [
-  {
-    id: "meeting-1",
-    title: "Product Strategy Review",
-    date: "2024-01-15",
-    time: "10:00 AM",
-    participants: 8,
-    status: "completed"
-  },
-  {
-    id: "meeting-2", 
-    title: "Sprint Planning",
-    date: "2024-01-16",
-    time: "2:00 PM",
-    participants: 6,
-    status: "completed"
-  },
-  {
-    id: "meeting-3",
-    title: "Client Presentation",
-    date: "2024-01-17",
-    time: "11:00 AM", 
-    participants: 12,
-    status: "in-progress"
-  },
-  {
-    id: "meeting-4",
-    title: "Team Standup",
-    date: "2024-01-18",
-    time: "9:00 AM",
-    participants: 5,
-    status: "upcoming"
-  },
-  {
-    id: "meeting-5",
-    title: "Q1 Budget Review",
-    date: "2024-01-19",
-    time: "3:00 PM",
-    participants: 10,
-    status: "upcoming"
-  }
-];
 
 interface MeetingsSidebarProps {
   selectedMeetingId: string;
@@ -61,7 +20,34 @@ interface MeetingsSidebarProps {
 }
 
 export function MeetingsSidebar({ selectedMeetingId, onMeetingSelect }: MeetingsSidebarProps) {
-  const getStatusColor = (status: Meeting["status"]) => {
+  const [meetings, setMeetings] = useState<Meeting[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadMeetings();
+  }, []);
+
+  const loadMeetings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('meetings')
+        .select('*')
+        .order('meeting_date', { ascending: false });
+
+      if (error) {
+        console.error('Error loading meetings:', error);
+        return;
+      }
+
+      setMeetings(data || []);
+    } catch (error) {
+      console.error('Error loading meetings:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getStatusColor = (status: string) => {
     switch (status) {
       case "completed": return "text-teams-success";
       case "in-progress": return "text-teams-blue";
@@ -70,7 +56,7 @@ export function MeetingsSidebar({ selectedMeetingId, onMeetingSelect }: Meetings
     }
   };
 
-  const getStatusDot = (status: Meeting["status"]) => {
+  const getStatusDot = (status: string) => {
     switch (status) {
       case "completed": return "bg-teams-success";
       case "in-progress": return "bg-teams-blue animate-pulse";
@@ -78,6 +64,43 @@ export function MeetingsSidebar({ selectedMeetingId, onMeetingSelect }: Meetings
       default: return "bg-muted-foreground";
     }
   };
+
+  const getStatusIcon = (status: string) => {
+    return status === "completed" ? CheckCircle : AlertCircle;
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return {
+      date: date.toLocaleDateString(),
+      time: date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+  };
+
+  if (loading) {
+    return (
+      <div className="w-80 border-r border-border bg-teams-gray-light/50 flex flex-col">
+        <div className="p-6 border-b border-border">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 rounded-lg bg-gradient-to-r from-teams-blue to-teams-purple">
+              <Video className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-xl font-semibold text-foreground">Teams Meetings</h1>
+              <p className="text-sm text-muted-foreground">Manage your meetings</p>
+            </div>
+          </div>
+        </div>
+        <div className="p-4">
+          <div className="animate-pulse space-y-2">
+            <div className="h-20 bg-muted rounded-lg"></div>
+            <div className="h-20 bg-muted rounded-lg"></div>
+            <div className="h-20 bg-muted rounded-lg"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-80 border-r border-border bg-teams-gray-light/50 flex flex-col">
@@ -98,50 +121,69 @@ export function MeetingsSidebar({ selectedMeetingId, onMeetingSelect }: Meetings
       
       <ScrollArea className="flex-1">
         <div className="p-4 space-y-2">
-          {dummyMeetings.map((meeting) => (
-            <Button
-              key={meeting.id}
-              variant="ghost"
-              className={cn(
-                "w-full p-4 h-auto justify-start text-left transition-all duration-200",
-                "hover:bg-white/80 hover:shadow-sm",
-                selectedMeetingId === meeting.id && "bg-white shadow-md border border-teams-blue/20"
-              )}
-              onClick={() => onMeetingSelect(meeting.id)}
-            >
-              <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between mb-2">
-                  <h3 className="font-medium text-sm text-foreground truncate pr-2">
-                    {meeting.title}
-                  </h3>
-                  <div className={cn("w-2 h-2 rounded-full mt-1 flex-shrink-0", getStatusDot(meeting.status))} />
-                </div>
-                
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Calendar className="h-3 w-3" />
-                    <span>{new Date(meeting.date).toLocaleDateString()}</span>
+          {meetings.map((meeting) => {
+            const StatusIcon = getStatusIcon(meeting.status);
+            const { date, time } = formatDate(meeting.meeting_date);
+            
+            return (
+              <Button
+                key={meeting.id}
+                variant="ghost"
+                className={cn(
+                  "w-full p-4 h-auto justify-start text-left transition-all duration-200",
+                  "hover:bg-white/80 hover:shadow-sm",
+                  selectedMeetingId === meeting.id && "bg-white shadow-md border border-teams-blue/20"
+                )}
+                onClick={() => onMeetingSelect(meeting.id)}
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between mb-2">
+                    <h3 className="font-medium text-sm text-foreground truncate pr-2">
+                      {meeting.title}
+                    </h3>
+                    <div className="flex items-center gap-1">
+                      <StatusIcon className="w-3 h-3 text-muted-foreground" />
+                      <div className={cn("w-2 h-2 rounded-full flex-shrink-0", getStatusDot(meeting.status))} />
+                    </div>
                   </div>
                   
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Clock className="h-3 w-3" />
-                    <span>{meeting.time}</span>
+                  <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
+                    {meeting.description}
+                  </p>
+                  
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Calendar className="h-3 w-3" />
+                      <span>{date}</span>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Clock className="h-3 w-3" />
+                      <span>{time}</span>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Users className="h-3 w-3" />
+                      <span>{meeting.participant_count} participants</span>
+                    </div>
                   </div>
                   
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Users className="h-3 w-3" />
-                    <span>{meeting.participants} participants</span>
+                  <div className="mt-2">
+                    <span className={cn("text-xs font-medium capitalize", getStatusColor(meeting.status))}>
+                      {meeting.status.replace("-", " ")}
+                    </span>
                   </div>
                 </div>
-                
-                <div className="mt-2">
-                  <span className={cn("text-xs font-medium capitalize", getStatusColor(meeting.status))}>
-                    {meeting.status.replace("-", " ")}
-                  </span>
-                </div>
-              </div>
-            </Button>
-          ))}
+              </Button>
+            );
+          })}
+          
+          {meetings.length === 0 && !loading && (
+            <div className="text-center py-8">
+              <Video className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+              <p className="text-muted-foreground">No meetings found</p>
+            </div>
+          )}
         </div>
       </ScrollArea>
     </div>
