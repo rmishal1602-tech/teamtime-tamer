@@ -81,7 +81,7 @@ export function DocumentsTab({ meetingId, onDataChunksGenerated }: DocumentsTabP
         if (file.name.endsWith('.docx') || file.name.endsWith('.doc') || file.name.endsWith('.pdf') || file.type === 'application/pdf') {
           // Upload file to Supabase storage
           const fileExt = file.name.split('.').pop();
-          const filePath = `temp-user-id/${meetingId}/${Date.now()}-${file.name}`;
+          const filePath = `documents/${Date.now()}-${file.name}`;
           
           const { error: uploadError } = await supabase.storage
             .from('meeting-documents')
@@ -125,8 +125,7 @@ export function DocumentsTab({ meetingId, onDataChunksGenerated }: DocumentsTabP
             const { error: processError } = await supabase.functions.invoke('process-document', {
               body: {
                 chunks,
-                meetingId,
-                userId: 'temp-user-id' // TODO: Replace with actual user ID when auth is implemented
+                meetingId
               }
             });
 

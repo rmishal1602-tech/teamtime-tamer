@@ -24,14 +24,14 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  try {
-    const { chunks, meetingId, userId } = await req.json();
-    
-    if (!chunks || !meetingId || !userId) {
-      throw new Error('Missing required parameters: chunks, meetingId, userId');
-    }
+    try {
+      const { chunks, meetingId } = await req.json();
+      
+      if (!chunks || !meetingId) {
+        throw new Error('Missing required parameters: chunks, meetingId');
+      }
 
-    console.log(`Processing ${chunks.length} chunks for meeting ${meetingId}`);
+      console.log(`Processing ${chunks.length} chunks for meeting ${meetingId}`);
 
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -55,7 +55,7 @@ serve(async (req) => {
         const { error: chunkError } = await supabase
           .from('data_chunks')
           .insert({
-            user_id: userId,
+            user_id: 'anonymous',
             meeting_id: meetingId,
             text: chunk.text,
             source_document: chunk.source_document,
@@ -130,7 +130,7 @@ serve(async (req) => {
     // Save all action items to database
     if (allActionItems.length > 0) {
       const actionItemsToInsert = allActionItems.map(item => ({
-        user_id: userId,
+        user_id: 'anonymous',
         meeting_id: meetingId,
         action_item: item.actionItem,
         category: item.category,
