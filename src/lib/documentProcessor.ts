@@ -58,7 +58,7 @@ async function extractTextFromPDF(file: File): Promise<string> {
   }
 }
 
-export function createTextChunks(text: string, sourceDocument: string, chunkSize: number = 400): DataChunk[] {
+export function createTextChunks(text: string, sourceDocument: string, chunkSize: number = 1000): DataChunk[] {
   const chunks: DataChunk[] = [];
   const cleanText = text.replace(/\s+/g, ' ').trim();
   
