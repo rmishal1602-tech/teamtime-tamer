@@ -4,6 +4,7 @@ import { ActionItemsTab } from "@/components/ActionItemsTab";
 import { DocumentsTab } from "@/components/DocumentsTab";
 import { DataChunksTab } from "@/components/DataChunksTab";
 import { CheckSquare, FileText, Database } from "lucide-react";
+import { DataChunk } from "@/lib/documentProcessor";
 
 interface MainContentProps {
   meetingId: string;
@@ -11,6 +12,11 @@ interface MainContentProps {
 
 export function MainContent({ meetingId }: MainContentProps) {
   const [activeTab, setActiveTab] = useState("action-items");
+  const [dataChunks, setDataChunks] = useState<DataChunk[]>([]);
+
+  const handleDataChunksGenerated = (newChunks: DataChunk[]) => {
+    setDataChunks(prev => [...newChunks, ...prev]);
+  };
 
   const meetingTitles: Record<string, string> = {
     "meeting-1": "Product Strategy Review",
@@ -65,11 +71,11 @@ export function MainContent({ meetingId }: MainContentProps) {
             </TabsContent>
             
             <TabsContent value="documents" className="h-full mt-0">
-              <DocumentsTab meetingId={meetingId} />
+              <DocumentsTab meetingId={meetingId} onDataChunksGenerated={handleDataChunksGenerated} />
             </TabsContent>
             
             <TabsContent value="data-chunks" className="h-full mt-0">
-              <DataChunksTab meetingId={meetingId} />
+              <DataChunksTab meetingId={meetingId} dataChunks={dataChunks} />
             </TabsContent>
           </div>
         </Tabs>

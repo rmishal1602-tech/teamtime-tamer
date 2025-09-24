@@ -1,12 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { FileText, Search, Eye, Download, FileType } from "lucide-react";
+import { DataChunk } from "@/lib/documentProcessor";
 
-interface DataChunk {
+// Legacy dummy data structure for backward compatibility
+interface LegacyDataChunk {
   id: string;
   fileName: string;
   sourceDocument: string;
@@ -17,7 +19,7 @@ interface DataChunk {
   totalChunks: number;
 }
 
-const dummyDataChunks: DataChunk[] = [
+const dummyDataChunks: LegacyDataChunk[] = [
   {
     id: "chunk-1",
     fileName: "product_strategy_chunk_1.txt",
@@ -82,18 +84,32 @@ const dummyDataChunks: DataChunk[] = [
 
 interface DataChunksTabProps {
   meetingId: string;
+  dataChunks: DataChunk[];
 }
 
-export function DataChunksTab({ meetingId }: DataChunksTabProps) {
-  const [dataChunks] = useState<DataChunk[]>(dummyDataChunks);
+export function DataChunksTab({ meetingId, dataChunks }: DataChunksTabProps) {
+  const [allChunks, setAllChunks] = useState<(DataChunk | LegacyDataChunk)[]>(dummyDataChunks);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedChunk, setSelectedChunk] = useState<DataChunk | null>(null);
+  const [selectedChunk, setSelectedChunk] = useState<DataChunk | LegacyDataChunk | null>(null);
 
-  const filteredChunks = dataChunks.filter(chunk =>
-    chunk.fileName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    chunk.sourceDocument.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    chunk.content.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Update chunks when new data chunks are passed from parent
+  useEffect(() => {
+    if (dataChunks && dataChunks.length > 0) {
+      setAllChunks(prev => [...dataChunks, ...prev]);
+    }
+  }, [dataChunks]);
+
+  const filteredChunks = allChunks.filter(chunk => {
+    const fileName = 'fileName' in chunk ? chunk.fileName : `chunk-${chunk.chunkIndex}.txt`;
+    const content = 'content' in chunk ? chunk.content : chunk.text;
+    const searchLower = searchTerm.toLowerCase();
+    
+    return (
+      fileName.toLowerCase().includes(searchLower) ||
+      chunk.sourceDocument.toLowerCase().includes(searchLower) ||
+      content.toLowerCase().includes(searchLower)
+    );
+  });
 
   const groupedChunks = filteredChunks.reduce((acc, chunk) => {
     if (!acc[chunk.sourceDocument]) {
@@ -101,7 +117,7 @@ export function DataChunksTab({ meetingId }: DataChunksTabProps) {
     }
     acc[chunk.sourceDocument].push(chunk);
     return acc;
-  }, {} as Record<string, DataChunk[]>);
+  }, {} as Record<string, (DataChunk | LegacyDataChunk)[]>);
 
   return (
     <div className="h-full flex gap-6">
@@ -144,7 +160,14 @@ export function DataChunksTab({ meetingId }: DataChunksTabProps) {
                     </h3>
                     
                     <div className="space-y-2 ml-6">
-                      {chunks.map((chunk) => (
+                      {chunks.map((chunk) => {
+                        const fileName = 'fileName' in chunk ? chunk.fileName : `chunk-${chunk.chunkIndex}.txt`;
+                        const content = 'content' in chunk ? chunk.content : chunk.text;
+                        const size = 'size' in chunk ? chunk.size : `${chunk.text.length} chars`;
+                        const createdDate = 'createdDate' in chunk ? chunk.createdDate : chunk.createdAt.split('T')[0];
+                        const totalChunks = 'totalChunks' in chunk ? chunk.totalChunks : '?';
+                        
+                        return (
                         <div
                           key={chunk.id}
                           className={`p-4 border border-border rounded-lg cursor-pointer transition-all duration-200 hover:bg-muted/20 ${
@@ -155,9 +178,9 @@ export function DataChunksTab({ meetingId }: DataChunksTabProps) {
                           <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center gap-2">
                               <FileType className="h-4 w-4 text-muted-foreground" />
-                              <span className="font-medium text-sm">{chunk.fileName}</span>
+                              <span className="font-medium text-sm">{fileName}</span>
                               <Badge variant="secondary" className="text-xs">
-                                {chunk.chunkIndex}/{chunk.totalChunks}
+                                {chunk.chunkIndex}/{totalChunks}
                               </Badge>
                             </div>
                             <div className="flex items-center gap-2">
@@ -171,15 +194,15 @@ export function DataChunksTab({ meetingId }: DataChunksTabProps) {
                           </div>
                           
                           <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
-                            {chunk.content}
+                            {content}
                           </p>
                           
                           <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                            <span>{chunk.size}</span>
-                            <span>Created {new Date(chunk.createdDate).toLocaleDateString()}</span>
+                            <span>{size}</span>
+                            <span>Created {new Date(createdDate).toLocaleDateString()}</span>
                           </div>
                         </div>
-                      ))}
+                      )})}
                     </div>
                   </div>
                 ))}
@@ -190,7 +213,7 @@ export function DataChunksTab({ meetingId }: DataChunksTabProps) {
                   </div>
                 )}
                 
-                {dataChunks.length === 0 && (
+                {allChunks.length === 0 && (
                   <div className="text-center py-8">
                     <FileType className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                     <p className="text-muted-foreground">No data chunks available</p>
@@ -215,14 +238,16 @@ export function DataChunksTab({ meetingId }: DataChunksTabProps) {
             {selectedChunk ? (
               <div className="space-y-4">
                 <div>
-                  <h4 className="font-medium text-foreground mb-1">{selectedChunk.fileName}</h4>
+                  <h4 className="font-medium text-foreground mb-1">
+                    {'fileName' in selectedChunk ? selectedChunk.fileName : `chunk-${selectedChunk.chunkIndex}.txt`}
+                  </h4>
                   <p className="text-sm text-muted-foreground">
                     From: {selectedChunk.sourceDocument}
                   </p>
                   <div className="flex items-center gap-4 text-xs text-muted-foreground mt-2">
-                    <span>Chunk {selectedChunk.chunkIndex} of {selectedChunk.totalChunks}</span>
-                    <span>{selectedChunk.size}</span>
-                    <span>{new Date(selectedChunk.createdDate).toLocaleDateString()}</span>
+                    <span>Chunk {selectedChunk.chunkIndex} {'totalChunks' in selectedChunk ? `of ${selectedChunk.totalChunks}` : ''}</span>
+                    <span>{'size' in selectedChunk ? selectedChunk.size : `${selectedChunk.text.length} chars`}</span>
+                    <span>{new Date('createdDate' in selectedChunk ? selectedChunk.createdDate : selectedChunk.createdAt.split('T')[0]).toLocaleDateString()}</span>
                   </div>
                 </div>
                 
@@ -230,7 +255,7 @@ export function DataChunksTab({ meetingId }: DataChunksTabProps) {
                   <h5 className="font-medium text-sm text-foreground mb-2">Content</h5>
                   <ScrollArea className="h-[400px]">
                     <div className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
-                      {selectedChunk.content}
+                      {'content' in selectedChunk ? selectedChunk.content : selectedChunk.text}
                     </div>
                   </ScrollArea>
                 </div>

@@ -3,8 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Upload, FileText, Download, Eye, Search } from "lucide-react";
+import { Upload, FileText, Download, Eye, Search, Loader } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { extractTextFromFile, createTextChunks, DataChunk } from "@/lib/documentProcessor";
 
 interface Document {
   id: string;
@@ -52,12 +53,14 @@ const dummyDocuments: Document[] = [
 
 interface DocumentsTabProps {
   meetingId: string;
+  onDataChunksGenerated: (chunks: DataChunk[]) => void;
 }
 
-export function DocumentsTab({ meetingId }: DocumentsTabProps) {
+export function DocumentsTab({ meetingId, onDataChunksGenerated }: DocumentsTabProps) {
   const [documents, setDocuments] = useState<Document[]>(dummyDocuments);
   const [searchTerm, setSearchTerm] = useState("");
   const [isDragging, setIsDragging] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -66,33 +69,68 @@ export function DocumentsTab({ meetingId }: DocumentsTabProps) {
     doc.description.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleFileUpload = (files: FileList | null) => {
+  const handleFileUpload = async (files: FileList | null) => {
     if (!files) return;
 
-    Array.from(files).forEach(file => {
-      if (file.type.includes('document') || file.name.endsWith('.docx') || file.name.endsWith('.doc')) {
-        const newDoc: Document = {
-          id: Date.now().toString() + Math.random(),
-          name: file.name,
-          type: file.type.includes('word') ? 'Word Document' : 'Document',
-          size: formatFileSize(file.size),
-          uploadDate: new Date().toISOString().split('T')[0],
-          description: 'Meeting transcript uploaded by user'
-        };
-        
-        setDocuments(prev => [newDoc, ...prev]);
+    setIsProcessing(true);
+
+    for (const file of Array.from(files)) {
+      try {
+        // Check if file is Word or PDF
+        if (file.name.endsWith('.docx') || file.name.endsWith('.doc') || file.name.endsWith('.pdf') || file.type === 'application/pdf') {
+          const newDoc: Document = {
+            id: Date.now().toString() + Math.random(),
+            name: file.name,
+            type: file.name.endsWith('.pdf') ? 'PDF Document' : 'Word Document',
+            size: formatFileSize(file.size),
+            uploadDate: new Date().toISOString().split('T')[0],
+            description: 'Meeting transcript uploaded by user'
+          };
+          
+          setDocuments(prev => [newDoc, ...prev]);
+          
+          // Extract text and create chunks
+          try {
+            toast({
+              title: "Processing document",
+              description: `Extracting text from ${file.name}...`
+            });
+            
+            const extractedText = await extractTextFromFile(file);
+            const chunks = createTextChunks(extractedText, file.name);
+            
+            onDataChunksGenerated(chunks);
+            
+            toast({
+              title: "Document processed successfully",
+              description: `${file.name} uploaded and ${chunks.length} text chunks generated.`
+            });
+          } catch (error) {
+            console.error('Error processing document:', error);
+            toast({
+              title: "Text extraction failed",
+              description: `${file.name} uploaded but text could not be extracted.`,
+              variant: "destructive"
+            });
+          }
+        } else {
+          toast({
+            title: "Invalid file type",
+            description: "Please upload Word documents (.docx, .doc) or PDF files only.",
+            variant: "destructive"
+          });
+        }
+      } catch (error) {
+        console.error('Error uploading file:', error);
         toast({
-          title: "Document uploaded",
-          description: `${file.name} has been uploaded successfully.`
-        });
-      } else {
-        toast({
-          title: "Invalid file type",
-          description: "Please upload Word documents (.docx, .doc) only.",
+          title: "Upload failed",
+          description: `Failed to upload ${file.name}.`,
           variant: "destructive"
         });
       }
-    });
+    }
+
+    setIsProcessing(false);
   };
 
   const formatFileSize = (bytes: number): string => {
@@ -147,13 +185,14 @@ export function DocumentsTab({ meetingId }: DocumentsTabProps) {
         </div>
       </div>
 
-      <input
+        <input
         ref={fileInputRef}
         type="file"
         multiple
-        accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        accept=".doc,.docx,.pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf"
         onChange={(e) => handleFileUpload(e.target.files)}
         className="hidden"
+        disabled={isProcessing}
       />
 
       {/* Upload Area */}
@@ -168,18 +207,31 @@ export function DocumentsTab({ meetingId }: DocumentsTabProps) {
         onDrop={handleDrop}
       >
         <CardContent className="p-8 text-center">
-          <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-          <h3 className="text-lg font-medium mb-2">Drop files here or click to upload</h3>
-          <p className="text-muted-foreground mb-4">
-            Upload Word documents (.docx, .doc) containing meeting transcripts
-          </p>
-          <Button 
-            variant="outline" 
-            onClick={() => fileInputRef.current?.click()}
-            className="border-teams-blue text-teams-blue hover:bg-teams-blue/10"
-          >
-            Choose Files
-          </Button>
+          {isProcessing ? (
+            <>
+              <Loader className="h-12 w-12 mx-auto mb-4 text-teams-blue animate-spin" />
+              <h3 className="text-lg font-medium mb-2">Processing documents...</h3>
+              <p className="text-muted-foreground mb-4">
+                Extracting text and creating data chunks
+              </p>
+            </>
+          ) : (
+            <>
+              <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+              <h3 className="text-lg font-medium mb-2">Drop files here or click to upload</h3>
+              <p className="text-muted-foreground mb-4">
+                Upload Word documents (.docx, .doc) or PDF files containing meeting transcripts
+              </p>
+              <Button 
+                variant="outline" 
+                onClick={() => fileInputRef.current?.click()}
+                className="border-teams-blue text-teams-blue hover:bg-teams-blue/10"
+                disabled={isProcessing}
+              >
+                Choose Files
+              </Button>
+            </>
+          )}
         </CardContent>
       </Card>
 
