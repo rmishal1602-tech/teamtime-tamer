@@ -125,7 +125,8 @@ export function DocumentsTab({ meetingId, onDataChunksGenerated }: DocumentsTabP
             const { error: processError } = await supabase.functions.invoke('process-document', {
               body: {
                 chunks,
-                meetingId
+                meetingId,
+                userId: 'demo-user-id'
               }
             });
 

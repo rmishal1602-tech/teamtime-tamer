@@ -74,6 +74,15 @@ export function ActionItemsTab({ meetingId }: ActionItemsTabProps) {
 
   const loadActionItems = async () => {
     try {
+      // Only try to load from database if meetingId is a valid UUID
+      const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(meetingId);
+      
+      if (!isValidUUID) {
+        // If not a valid UUID, just use dummy data
+        setActionItems(dummyActionItems);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('action_items')
         .select('*')
