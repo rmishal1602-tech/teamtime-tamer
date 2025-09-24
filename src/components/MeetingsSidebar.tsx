@@ -86,8 +86,8 @@ export function MeetingsSidebar({ selectedMeetingId, onMeetingSelect }: Meetings
               <Video className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-semibold text-foreground">Teams Meetings</h1>
-              <p className="text-sm text-muted-foreground">Manage your meetings</p>
+              <h1 className="text-xl font-semibold text-foreground">Project Compass</h1>
+              <p className="text-sm text-muted-foreground">Meetings Action Tracker</p>
             </div>
           </div>
         </div>
