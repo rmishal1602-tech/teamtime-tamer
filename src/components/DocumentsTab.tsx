@@ -122,7 +122,7 @@ export function DocumentsTab({ meetingId, onDataChunksGenerated }: DocumentsTabP
             }));
             
             // Send chunks to edge function for processing
-            const { error: processError } = await supabase.functions.invoke('process-document', {
+            const { data: processResult, error: processError } = await supabase.functions.invoke('process-document', {
               body: {
                 chunks,
                 meetingId,
@@ -142,9 +142,10 @@ export function DocumentsTab({ meetingId, onDataChunksGenerated }: DocumentsTabP
             
             onDataChunksGenerated(chunks);
             
+            const actionItemsCount = processResult?.actionItemsGenerated || 0;
             toast({
               title: "Document processed successfully",
-              description: `${file.name} uploaded and ${chunks.length} text chunks generated with action items.`
+              description: `${file.name} uploaded, ${chunks.length} chunks generated, and ${actionItemsCount} action items extracted from Azure OpenAI.`
             });
           } catch (error) {
             console.error('Error processing document:', error);

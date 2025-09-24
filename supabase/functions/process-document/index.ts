@@ -24,14 +24,14 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-    try {
-      const { chunks, meetingId } = await req.json();
-      
-      if (!chunks || !meetingId) {
-        throw new Error('Missing required parameters: chunks, meetingId');
-      }
+  try {
+    const { chunks, meetingId, userId } = await req.json();
+    
+    if (!chunks || !Array.isArray(chunks)) {
+      throw new Error('Missing or invalid chunks parameter');
+    }
 
-      console.log(`Processing ${chunks.length} chunks for meeting ${meetingId}`);
+    console.log(`Processing ${chunks.length} chunks for meeting ${meetingId}`);
 
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -45,92 +45,107 @@ serve(async (req) => {
     }
 
     const allActionItems: ActionItem[] = [];
+    const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(meetingId || '');
 
     // Process each chunk
-    for (const chunk of chunks) {
+    for (let i = 0; i < chunks.length; i++) {
+      const chunk = chunks[i];
       try {
-        console.log(`Processing chunk ${chunk.chunk_index} from ${chunk.source_document}`);
+        console.log(`Processing chunk ${i + 1}/${chunks.length} from ${chunk.sourceDocument || 'unknown'}`);
         
-        // Save chunk to database
-        const { error: chunkError } = await supabase
-          .from('data_chunks')
-          .insert({
-            user_id: 'anonymous',
-            meeting_id: meetingId,
-            text: chunk.text,
-            source_document: chunk.source_document,
-            chunk_index: chunk.chunk_index,
-            file_path: chunk.file_path
-          });
+        // Only save to database if meetingId is a valid UUID
+        if (isValidUUID && chunk.text && chunk.sourceDocument) {
+          const { error: chunkError } = await supabase
+            .from('data_chunks')
+            .insert({
+              user_id: userId || 'demo-user',
+              meeting_id: meetingId,
+              text: chunk.text,
+              source_document: chunk.sourceDocument,
+              chunk_index: chunk.chunkIndex || i,
+              file_path: chunk.file_path || null
+            });
 
-        if (chunkError) {
-          console.error('Error saving chunk:', chunkError);
-          continue;
+          if (chunkError) {
+            console.error('Error saving chunk:', chunkError);
+            // Continue processing even if database save fails
+          }
         }
 
         // Generate action items from chunk using Azure OpenAI
-        const response = await fetch('https://jss-azure-open-ai.openai.azure.com/openai/deployments/jss-gpt-4o/chat/completions?api-version=2025-01-01-preview', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${azureApiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            messages: [
-              {
-                role: 'system',
-                content: `You are an AI assistant that extracts action items from meeting transcripts. 
-                
-                For each action item you identify, provide a JSON object with these fields:
-                - actionItem: Clear, specific description of the task
-                - category: One of "Task", "Follow-up", "Decision", "Research", "Review"
-                - priority: One of "Low", "Medium", "High", "Critical"
-                - status: Always "Not Started"
-                - dueDate: If mentioned, format as YYYY-MM-DD, otherwise null
-                - remarks: Any additional context or notes
-                - additionalInfo: Supporting details if any
-                - assignedTo: Person responsible if mentioned, otherwise null
-                
-                Return only a JSON array of action items. If no action items are found, return an empty array.`
-              },
-              {
-                role: 'user',
-                content: `Extract action items from this meeting transcript chunk:\n\n${chunk.text}`
+        if (chunk.text && chunk.text.trim().length > 0) {
+          console.log(`Sending chunk to Azure OpenAI: ${chunk.text.substring(0, 100)}...`);
+          
+          const response = await fetch('https://jss-azure-open-ai.openai.azure.com/openai/deployments/jss-gpt-4o/chat/completions?api-version=2025-01-01-preview', {
+            method: 'POST',
+            headers: {
+              'api-key': azureApiKey,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              messages: [
+                {
+                  role: 'system',
+                  content: `You are an AI assistant that extracts action items from meeting transcripts. 
+                  
+                  For each action item you identify, provide a JSON object with these fields:
+                  - actionItem: Clear, specific description of the task
+                  - category: One of "Task", "Follow-up", "Decision", "Research", "Review"
+                  - priority: One of "Low", "Medium", "High", "Critical"
+                  - status: Always "Not Started"
+                  - dueDate: If mentioned, format as YYYY-MM-DD, otherwise null
+                  - remarks: Any additional context or notes
+                  - additionalInfo: Supporting details if any
+                  - assignedTo: Person responsible if mentioned, otherwise null
+                  
+                  Return ONLY a valid JSON array of action items. If no action items are found, return an empty array [].
+                  Do not include any text before or after the JSON array.`
+                },
+                {
+                  role: 'user',
+                  content: `Extract action items from this meeting transcript chunk:\n\n${chunk.text}`
+                }
+              ],
+              max_tokens: 1000,
+              temperature: 0.3
+            }),
+          });
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`Azure OpenAI API error: ${response.status} ${response.statusText} - ${errorText}`);
+            continue;
+          }
+
+          const data = await response.json();
+          const content = data.choices?.[0]?.message?.content;
+          
+          if (content) {
+            try {
+              console.log('Azure OpenAI response:', content);
+              const actionItems = JSON.parse(content);
+              if (Array.isArray(actionItems)) {
+                allActionItems.push(...actionItems);
+                console.log(`Extracted ${actionItems.length} action items from chunk ${i + 1}`);
+              } else {
+                console.log('Response was not an array:', actionItems);
               }
-            ],
-            max_tokens: 1000,
-            temperature: 0.3
-          }),
-        });
-
-        if (!response.ok) {
-          console.error(`Azure OpenAI API error: ${response.status} ${response.statusText}`);
-          continue;
-        }
-
-        const data = await response.json();
-        const content = data.choices?.[0]?.message?.content;
-        
-        if (content) {
-          try {
-            const actionItems = JSON.parse(content);
-            if (Array.isArray(actionItems)) {
-              allActionItems.push(...actionItems);
-              console.log(`Extracted ${actionItems.length} action items from chunk ${chunk.chunk_index}`);
+            } catch (parseError) {
+              console.error('Error parsing Azure OpenAI response:', parseError, 'Content:', content);
             }
-          } catch (parseError) {
-            console.error('Error parsing Azure OpenAI response:', parseError);
+          } else {
+            console.log('No content in Azure OpenAI response');
           }
         }
       } catch (error) {
-        console.error(`Error processing chunk ${chunk.chunk_index}:`, error);
+        console.error(`Error processing chunk ${i + 1}:`, error);
       }
     }
 
-    // Save all action items to database
-    if (allActionItems.length > 0) {
+    // Save all action items to database if we have a valid UUID
+    if (allActionItems.length > 0 && isValidUUID) {
       const actionItemsToInsert = allActionItems.map(item => ({
-        user_id: 'anonymous',
+        user_id: userId || 'demo-user',
         meeting_id: meetingId,
         action_item: item.actionItem,
         category: item.category,
@@ -148,16 +163,19 @@ serve(async (req) => {
 
       if (actionItemsError) {
         console.error('Error saving action items:', actionItemsError);
-        throw actionItemsError;
+        // Don't throw error, just log it
+      } else {
+        console.log(`Successfully saved ${allActionItems.length} action items to database`);
       }
-
-      console.log(`Successfully saved ${allActionItems.length} action items`);
     }
+
+    console.log(`Processing completed: ${chunks.length} chunks processed, ${allActionItems.length} action items generated`);
 
     return new Response(JSON.stringify({ 
       success: true, 
       chunksProcessed: chunks.length,
-      actionItemsGenerated: allActionItems.length 
+      actionItemsGenerated: allActionItems.length,
+      actionItems: allActionItems // Return the action items for immediate use
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
