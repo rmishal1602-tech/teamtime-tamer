@@ -3,7 +3,6 @@ import { useParams } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { MainContent } from "@/components/MainContent";
-import { ProjectSelector } from "@/components/ProjectSelector";
 
 const Index = () => {
   const { meetingId } = useParams<{ meetingId?: string }>();
@@ -34,12 +33,8 @@ const Index = () => {
         />
         
         <div className="flex-1 flex flex-col">
-          <header className="h-12 flex items-center justify-between border-b bg-white/50 backdrop-blur-sm px-4">
-            <div className="flex items-center gap-2">
-              <SidebarTrigger className="ml-2" />
-              <div className="h-6 w-px bg-border" />
-              <ProjectSelector />
-            </div>
+          <header className="h-12 flex items-center border-b bg-white/50 backdrop-blur-sm">
+            <SidebarTrigger className="ml-2" />
           </header>
           
           <main className="flex-1">

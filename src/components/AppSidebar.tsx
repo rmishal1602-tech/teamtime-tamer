@@ -3,6 +3,7 @@ import { Calendar, Users, Clock, Video, CheckCircle, AlertCircle, ChevronRight }
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ProjectSelector } from "@/components/ProjectSelector";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Sidebar,
@@ -109,9 +110,12 @@ export function AppSidebar({ selectedMeetingId, onMeetingSelect }: AppSidebarPro
           )}
         </div>
         {!isCollapsed && (
-          <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white mt-4">
-            New Meeting
-          </Button>
+          <div className="space-y-3 mt-4">
+            <ProjectSelector />
+            <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+              New Meeting
+            </Button>
+          </div>
         )}
       </SidebarHeader>
 
