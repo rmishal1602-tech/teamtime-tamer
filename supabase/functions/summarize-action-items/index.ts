@@ -132,8 +132,24 @@ Rules:
       const aiResponse = azureData.choices[0].message.content;
       console.log('AI Response:', aiResponse);
       
+      // Extract JSON from markdown code blocks if present
+      let jsonString = aiResponse;
+      if (aiResponse.includes('```json')) {
+        const jsonMatch = aiResponse.match(/```json\s*([\s\S]*?)\s*```/);
+        if (jsonMatch && jsonMatch[1]) {
+          jsonString = jsonMatch[1].trim();
+        }
+      } else if (aiResponse.includes('```')) {
+        const codeMatch = aiResponse.match(/```\s*([\s\S]*?)\s*```/);
+        if (codeMatch && codeMatch[1]) {
+          jsonString = codeMatch[1].trim();
+        }
+      }
+      
+      console.log('Extracted JSON:', jsonString);
+      
       // Parse the JSON response
-      consolidatedTasks = JSON.parse(aiResponse);
+      consolidatedTasks = JSON.parse(jsonString);
     } catch (parseError) {
       console.error('Error parsing AI response:', parseError);
       return new Response(
