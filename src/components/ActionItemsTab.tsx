@@ -394,6 +394,68 @@ export function ActionItemsTab({ meetingId }: ActionItemsTabProps) {
     }
   };
 
+  const handleUpdateBusinessRequirements = async () => {
+    try {
+      // Get current business requirements from the Business Requirements tab
+      const { data: currentBRData } = await supabase
+        .from('business_requirements')
+        .select('content')
+        .eq('meeting_id', meetingId)
+        .order('version', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const currentBusinessRequirements = currentBRData?.content || `# Business Requirements Document
+
+## 1. Project Overview
+**Project Name:** [Project Name]
+**Date:** ${new Date().toLocaleDateString()}
+**Stakeholders:** [List key stakeholders]
+**Document Version:** 1.0
+
+## 2. Executive Summary
+Provide a high-level overview of the project, its objectives, and expected outcomes.
+
+Please update this template with relevant information based on the action items.`;
+
+      const { data, error } = await supabase.functions.invoke('update-business-requirements', {
+        body: { 
+          meetingId: meetingId,
+          actionItems: actionItems,
+          currentBusinessRequirements: currentBusinessRequirements
+        }
+      });
+
+      if (error) {
+        console.error('Error updating business requirements:', error);
+        toast({
+          title: "Error",
+          description: "Failed to update business requirements. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Success",
+        description: `Business requirements updated successfully! Version ${data.version} created.`,
+      });
+
+      // Trigger a refresh of the Business Requirements tab by dispatching a custom event
+      window.dispatchEvent(new CustomEvent('businessRequirementsUpdated', { 
+        detail: { content: data.content, version: data.version } 
+      }));
+
+    } catch (error) {
+      console.error('Error calling update business requirements function:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred while updating business requirements.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="h-full flex flex-col gap-6">
       <div className="flex justify-between items-center">
@@ -409,6 +471,15 @@ export function ActionItemsTab({ meetingId }: ActionItemsTabProps) {
             disabled={actionItems.length === 0}
           >
             Summarize/Merge Action Items
+          </Button>
+          <Button 
+            onClick={handleUpdateBusinessRequirements}
+            variant="secondary"
+            className="bg-blue-100 hover:bg-blue-200 text-blue-700"
+            disabled={actionItems.length === 0}
+          >
+            <FileText className="h-4 w-4 mr-2" />
+            Update Business Requirements
           </Button>
           <Button 
             onClick={addNewItem}

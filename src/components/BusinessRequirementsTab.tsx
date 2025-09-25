@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Save, Edit3, FileText } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Save, Edit3, FileText, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface BusinessRequirementsTabProps {
   meetingId: string;
@@ -144,19 +146,141 @@ export function BusinessRequirementsTab({ meetingId }: BusinessRequirementsTabPr
   const [content, setContent] = useState(defaultTemplate);
   const [isEditing, setIsEditing] = useState(false);
   const [originalContent, setOriginalContent] = useState(defaultTemplate);
+  const [isLoading, setIsLoading] = useState(false);
+  const [currentVersion, setCurrentVersion] = useState<number>(1);
   const { toast } = useToast();
+
+  // Load business requirements from database
+  useEffect(() => {
+    loadBusinessRequirements();
+  }, [meetingId]);
+
+  // Listen for updates from the ActionItemsTab
+  useEffect(() => {
+    const handleBusinessRequirementsUpdate = (event: CustomEvent) => {
+      setContent(event.detail.content);
+      setCurrentVersion(event.detail.version);
+      toast({
+        title: "Business Requirements Updated",
+        description: `New version ${event.detail.version} loaded from AI generation.`
+      });
+    };
+
+    window.addEventListener('businessRequirementsUpdated', handleBusinessRequirementsUpdate as EventListener);
+    return () => window.removeEventListener('businessRequirementsUpdated', handleBusinessRequirementsUpdate as EventListener);
+  }, [toast]);
+
+  const loadBusinessRequirements = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Only try to load from database if meetingId is a valid UUID
+      const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(meetingId);
+      
+      if (!isValidUUID) {
+        setContent(defaultTemplate);
+        setCurrentVersion(1);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('business_requirements')
+        .select('*')
+        .eq('meeting_id', meetingId)
+        .order('version', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
+        console.error('Error loading business requirements:', error);
+        setContent(defaultTemplate);
+        setCurrentVersion(1);
+        return;
+      }
+
+      if (data) {
+        setContent(data.content);
+        setCurrentVersion(data.version);
+        setOriginalContent(data.content);
+      } else {
+        setContent(defaultTemplate);
+        setCurrentVersion(1);
+        setOriginalContent(defaultTemplate);
+      }
+    } catch (error) {
+      console.error('Error loading business requirements:', error);
+      setContent(defaultTemplate);
+      setCurrentVersion(1);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleEdit = () => {
     setOriginalContent(content);
     setIsEditing(true);
   };
 
-  const handleSave = () => {
-    setIsEditing(false);
-    toast({
-      title: "Business Requirements Saved",
-      description: "Your business requirements document has been saved successfully."
-    });
+  const handleSave = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Only save to database if meetingId is a valid UUID
+      const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(meetingId);
+      
+      if (isValidUUID) {
+        // Get the latest version number
+        const { data: latestVersion } = await supabase
+          .from('business_requirements')
+          .select('version')
+          .eq('meeting_id', meetingId)
+          .order('version', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        const newVersion = latestVersion ? latestVersion.version + 1 : 1;
+
+        const { error } = await supabase
+          .from('business_requirements')
+          .insert({
+            meeting_id: meetingId,
+            content: content,
+            version: newVersion
+          });
+
+        if (error) {
+          console.error('Error saving business requirements:', error);
+          toast({
+            title: "Error saving document",
+            description: "Failed to save business requirements to database",
+            variant: "destructive"
+          });
+          return;
+        }
+
+        setCurrentVersion(newVersion);
+        toast({
+          title: "Business Requirements Saved",
+          description: `Document saved successfully as version ${newVersion}.`
+        });
+      } else {
+        toast({
+          title: "Business Requirements Saved",
+          description: "Your business requirements document has been saved locally."
+        });
+      }
+      
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Error saving business requirements:', error);
+      toast({
+        title: "Error saving document",
+        description: "An unexpected error occurred",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleCancel = () => {
@@ -174,20 +298,34 @@ export function BusinessRequirementsTab({ meetingId }: BusinessRequirementsTabPr
               <CardTitle className="text-xl font-semibold text-foreground">
                 Business Requirements Document
               </CardTitle>
+              <Badge variant="secondary" className="flex items-center gap-1">
+                <Clock className="h-3 w-3" />
+                v{currentVersion}
+              </Badge>
             </div>
             <div className="flex gap-2">
               {isEditing ? (
                 <>
-                  <Button onClick={handleSave} size="sm" className="flex items-center gap-2">
+                  <Button 
+                    onClick={handleSave} 
+                    size="sm" 
+                    className="flex items-center gap-2"
+                    disabled={isLoading}
+                  >
                     <Save className="h-4 w-4" />
-                    Save
+                    {isLoading ? "Saving..." : "Save"}
                   </Button>
                   <Button onClick={handleCancel} variant="outline" size="sm">
                     Cancel
                   </Button>
                 </>
               ) : (
-                <Button onClick={handleEdit} size="sm" className="flex items-center gap-2">
+                <Button 
+                  onClick={handleEdit} 
+                  size="sm" 
+                  className="flex items-center gap-2"
+                  disabled={isLoading}
+                >
                   <Edit3 className="h-4 w-4" />
                   Edit
                 </Button>

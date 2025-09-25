@@ -70,6 +70,33 @@ export type Database = {
           },
         ]
       }
+      business_requirements: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          meeting_id: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          meeting_id: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          meeting_id?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: []
+      }
       data_chunks: {
         Row: {
           chunk_index: number

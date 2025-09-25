@@ -12,3 +12,6 @@ verify_jwt = false
 
 [functions.summarize-action-items]
 verify_jwt = false
+
+[functions.update-business-requirements]
+verify_jwt = false
