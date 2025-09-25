@@ -118,6 +118,7 @@ export type Database = {
           id: string
           meeting_date: string | null
           participant_count: number | null
+          project_id: string | null
           status: string
           title: string
           updated_at: string
@@ -129,6 +130,7 @@ export type Database = {
           id?: string
           meeting_date?: string | null
           participant_count?: number | null
+          project_id?: string | null
           status?: string
           title: string
           updated_at?: string
@@ -140,10 +142,46 @@ export type Database = {
           id?: string
           meeting_date?: string | null
           participant_count?: number | null
+          project_id?: string | null
           status?: string
           title?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meetings_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          status?: string
+          updated_at?: string
         }
         Relationships: []
       }
