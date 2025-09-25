@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Edit, Save, X, Calendar } from "lucide-react";
+import { Plus, Edit, Save, X, Calendar, ArrowUpDown, ArrowUp, ArrowDown, Bell, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -19,7 +19,11 @@ interface ActionItem {
   remarks: string;
   additionalInfo: string;
   assignedTo: string;
+  sourceDocument?: string;
 }
+
+type SortField = keyof ActionItem;
+type SortDirection = 'asc' | 'desc';
 
 const dummyActionItems: ActionItem[] = [
   {
@@ -65,6 +69,8 @@ export function ActionItemsTab({ meetingId }: ActionItemsTabProps) {
   const [actionItems, setActionItems] = useState<ActionItem[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<ActionItem>>({});
+  const [sortField, setSortField] = useState<SortField>('actionItem');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const { toast } = useToast();
 
   // Load action items from database
@@ -83,21 +89,34 @@ export function ActionItemsTab({ meetingId }: ActionItemsTabProps) {
         return;
       }
 
-      const { data, error } = await supabase
+      // Fetch action items with related document chunks for references
+      const { data: actionItemsData, error: actionItemsError } = await supabase
         .from('action_items')
         .select('*')
         .eq('meeting_id', meetingId)
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error loading action items:', error);
-        // Fall back to dummy data if there's an error
+      if (actionItemsError) {
+        console.error('Error loading action items:', actionItemsError);
         setActionItems(dummyActionItems);
         return;
       }
 
+      // Fetch document chunks for the same meeting
+      const { data: chunksData, error: chunksError } = await supabase
+        .from('data_chunks')
+        .select('source_document')
+        .eq('meeting_id', meetingId);
+
+      if (chunksError) {
+        console.error('Error loading document chunks:', chunksError);
+      }
+
+      // Get unique source documents
+      const sourceDocuments = chunksData ? Array.from(new Set(chunksData.map(chunk => chunk.source_document))) : [];
+
       // Transform database records to ActionItem format
-      const transformedItems: ActionItem[] = data.map(item => ({
+      const transformedItems: ActionItem[] = actionItemsData.map(item => ({
         id: item.id,
         actionItem: item.action_item,
         category: item.category || '',
@@ -106,7 +125,8 @@ export function ActionItemsTab({ meetingId }: ActionItemsTabProps) {
         dueDate: item.due_date || '',
         remarks: item.remarks || '',
         additionalInfo: item.additional_info || '',
-        assignedTo: item.assigned_to || ''
+        assignedTo: item.assigned_to || '',
+        sourceDocument: sourceDocuments.length > 0 ? sourceDocuments[0] : undefined
       }));
 
       setActionItems(transformedItems.length > 0 ? transformedItems : dummyActionItems);
@@ -221,6 +241,51 @@ export function ActionItemsTab({ meetingId }: ActionItemsTabProps) {
     setEditForm({});
   };
 
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const getSortedItems = () => {
+    return [...actionItems].sort((a, b) => {
+      const aValue = a[sortField] || '';
+      const bValue = b[sortField] || '';
+      
+      let comparison = 0;
+      if (aValue < bValue) comparison = -1;
+      if (aValue > bValue) comparison = 1;
+      
+      return sortDirection === 'asc' ? comparison : -comparison;
+    });
+  };
+
+  const handleRemind = (item: ActionItem) => {
+    toast({
+      title: "Reminder Set",
+      description: `Reminder set for: ${item.actionItem}`,
+    });
+  };
+
+  const SortableHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
+    <th 
+      className="border border-border p-2 text-left font-semibold min-w-[120px] cursor-pointer hover:bg-muted/30 transition-colors"
+      onClick={() => handleSort(field)}
+    >
+      <div className="flex items-center gap-2">
+        {children}
+        {sortField === field ? (
+          sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+        ) : (
+          <ArrowUpDown className="h-3 w-3 opacity-50" />
+        )}
+      </div>
+    </th>
+  );
+
   const addNewItem = async () => {
     const newItem: ActionItem = {
       id: Date.now().toString(),
@@ -317,19 +382,21 @@ export function ActionItemsTab({ meetingId }: ActionItemsTabProps) {
             <table className="w-full border-collapse">
               <thead className="bg-muted/50 sticky top-0 z-10">
                 <tr>
-                  <th className="border border-border p-2 text-left font-semibold min-w-[200px]">Action Item</th>
-                  <th className="border border-border p-2 text-left font-semibold min-w-[120px]">Category</th>
-                  <th className="border border-border p-2 text-left font-semibold min-w-[100px]">Priority</th>
-                  <th className="border border-border p-2 text-left font-semibold min-w-[120px]">Status</th>
-                  <th className="border border-border p-2 text-left font-semibold min-w-[120px]">Due Date</th>
-                  <th className="border border-border p-2 text-left font-semibold min-w-[150px]">Assigned To</th>
-                  <th className="border border-border p-2 text-left font-semibold min-w-[150px]">Remarks</th>
-                  <th className="border border-border p-2 text-left font-semibold min-w-[150px]">Additional Info</th>
-                  <th className="border border-border p-2 text-center font-semibold w-[100px]">Actions</th>
+                  <SortableHeader field="actionItem">Action Item</SortableHeader>
+                  <SortableHeader field="category">Category</SortableHeader>
+                  <SortableHeader field="priority">Priority</SortableHeader>
+                  <SortableHeader field="status">Status</SortableHeader>
+                  <SortableHeader field="dueDate">Due Date</SortableHeader>
+                  <SortableHeader field="assignedTo">Assigned To</SortableHeader>
+                  <SortableHeader field="remarks">Remarks</SortableHeader>
+                  <SortableHeader field="additionalInfo">Additional Info</SortableHeader>
+                  <th className="border border-border p-2 text-center font-semibold w-[100px]">Action</th>
+                  <th className="border border-border p-2 text-center font-semibold w-[120px]">References</th>
+                  <th className="border border-border p-2 text-center font-semibold w-[100px]">Edit</th>
                 </tr>
               </thead>
               <tbody>
-                {actionItems.map((item) => (
+                {getSortedItems().map((item) => (
                   <tr key={item.id} className="hover:bg-muted/30 transition-colors">
                     <td className="border border-border p-2">
                       {editingId === item.id ? (
@@ -468,6 +535,33 @@ export function ActionItemsTab({ meetingId }: ActionItemsTabProps) {
                       )}
                     </td>
                     <td className="border border-border p-2">
+                      <div className="flex items-center justify-center">
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          onClick={() => handleRemind(item)}
+                          className="h-7 px-2 text-xs hover:bg-yellow-50 hover:border-yellow-300"
+                        >
+                          <Bell className="h-3 w-3 mr-1" />
+                          Remind
+                        </Button>
+                      </div>
+                    </td>
+                    <td className="border border-border p-2">
+                      <div className="flex items-center justify-center">
+                        {item.sourceDocument ? (
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground bg-muted/30 px-2 py-1 rounded">
+                            <FileText className="h-3 w-3" />
+                            <span className="truncate max-w-[100px]" title={item.sourceDocument}>
+                              {item.sourceDocument.split('.')[0]}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">Manual entry</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="border border-border p-2">
                       <div className="flex items-center justify-center gap-1">
                         {editingId === item.id ? (
                           <>
@@ -487,9 +581,9 @@ export function ActionItemsTab({ meetingId }: ActionItemsTabProps) {
                     </td>
                   </tr>
                 ))}
-                {actionItems.length === 0 && (
+                {getSortedItems().length === 0 && (
                   <tr>
-                    <td colSpan={9} className="border border-border p-8 text-center text-muted-foreground">
+                    <td colSpan={11} className="border border-border p-8 text-center text-muted-foreground">
                       <div className="flex flex-col items-center gap-2">
                         <Plus className="h-8 w-8 text-muted-foreground" />
                         <p>No action items yet</p>
