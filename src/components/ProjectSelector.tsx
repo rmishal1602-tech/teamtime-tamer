@@ -34,7 +34,7 @@ export function ProjectSelector({ selectedProjectId, onProjectSelect }: ProjectS
     if (selectedProjectId && projects.length > 0) {
       const project = projects.find(p => p.id === selectedProjectId);
       setSelectedProject(project || projects[0]);
-    } else if (projects.length > 0) {
+    } else if (projects.length > 0 && !selectedProject) {
       setSelectedProject(projects[0]);
     }
   }, [selectedProjectId, projects]);
@@ -45,7 +45,7 @@ export function ProjectSelector({ selectedProjectId, onProjectSelect }: ProjectS
         .from('projects')
         .select('*')
         .eq('status', 'active')
-        .order('name');
+        .order('created_at', { ascending: false });
 
       if (error) {
         console.error('Error loading projects:', error);
@@ -67,9 +67,9 @@ export function ProjectSelector({ selectedProjectId, onProjectSelect }: ProjectS
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 rounded-md">
+      <div className="flex items-center gap-2">
         <FolderOpen className="h-4 w-4 text-muted-foreground" />
-        <span className="text-sm text-muted-foreground">Loading...</span>
+        <div className="h-4 w-32 bg-muted animate-pulse rounded"></div>
       </div>
     );
   }
@@ -77,41 +77,29 @@ export function ProjectSelector({ selectedProjectId, onProjectSelect }: ProjectS
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button 
-          variant="ghost" 
-          className="flex items-center gap-2 px-3 py-1.5 h-auto text-sm font-medium hover:bg-muted"
-        >
-          <FolderOpen className="h-4 w-4 text-primary" />
+        <Button variant="ghost" className="flex items-center gap-2 h-8 px-3 text-sm">
+          <FolderOpen className="h-4 w-4" />
           <span className="max-w-[200px] truncate">
             {selectedProject?.name || 'Select Project'}
           </span>
-          <ChevronDown className="h-3 w-3 text-muted-foreground" />
+          <ChevronDown className="h-3 w-3" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-[280px] bg-background border shadow-md">
+      <DropdownMenuContent align="start" className="w-[300px] bg-background border border-border">
         {projects.map((project) => (
           <DropdownMenuItem
             key={project.id}
             onClick={() => handleProjectSelect(project)}
-            className="flex flex-col items-start gap-1 p-3 cursor-pointer hover:bg-muted"
+            className="flex flex-col items-start p-3 cursor-pointer hover:bg-muted"
           >
-            <div className="flex items-center gap-2 w-full">
-              <FolderOpen className="h-4 w-4 text-primary flex-shrink-0" />
-              <span className="font-medium text-foreground">{project.name}</span>
-            </div>
+            <div className="font-medium text-foreground">{project.name}</div>
             {project.description && (
-              <p className="text-xs text-muted-foreground ml-6 line-clamp-2">
+              <div className="text-xs text-muted-foreground mt-1 line-clamp-2">
                 {project.description}
-              </p>
+              </div>
             )}
           </DropdownMenuItem>
         ))}
-        
-        {projects.length === 0 && (
-          <div className="p-3 text-center text-sm text-muted-foreground">
-            No projects found
-          </div>
-        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );
