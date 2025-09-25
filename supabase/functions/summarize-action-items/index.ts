@@ -109,7 +109,7 @@ Rules:
               content: prompt
             }
           ],
-          max_tokens: 2000,
+          max_tokens: 4000,
           temperature: 0.3
         })
       }
@@ -168,6 +168,19 @@ Rules:
       // Validate that it looks like JSON
       if (!jsonString.startsWith('[') && !jsonString.startsWith('{')) {
         throw new Error('Extracted content does not appear to be valid JSON');
+      }
+      
+      // Check if JSON appears to be complete (for arrays, should end with ])
+      if (jsonString.startsWith('[') && !jsonString.trim().endsWith(']')) {
+        console.warn('JSON appears to be truncated, attempting to fix...');
+        // Try to find the last complete object and close the array
+        const lastCompleteObjectIndex = jsonString.lastIndexOf('}');
+        if (lastCompleteObjectIndex > 0) {
+          jsonString = jsonString.substring(0, lastCompleteObjectIndex + 1) + '\n]';
+          console.log('Attempted to fix truncated JSON');
+        } else {
+          throw new Error('JSON response appears to be truncated and cannot be repaired');
+        }
       }
       
       // Parse the JSON response
