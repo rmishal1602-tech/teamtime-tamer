@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Edit, Save, X, Calendar, ArrowUpDown, ArrowUp, ArrowDown, CheckSquare } from "lucide-react";
+import { Edit, Save, X, Calendar, ArrowUpDown, ArrowUp, ArrowDown, CheckSquare, Mail } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -211,6 +211,95 @@ export function TasksTab({ meetingId }: TasksTabProps) {
     });
   };
 
+  const formatTasksAsHTML = () => {
+    if (tasks.length === 0) {
+      return '<p>No tasks available.</p>';
+    }
+
+    let html = `
+      <html>
+        <head>
+          <title>Meeting Tasks</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f2f2f2; font-weight: bold; }
+            .priority-high, .priority-critical { background-color: #ffebee; color: #c62828; }
+            .priority-medium { background-color: #fff3e0; color: #ef6c00; }
+            .priority-low { background-color: #e8f5e8; color: #2e7d32; }
+            .status-completed { background-color: #e8f5e8; color: #2e7d32; }
+            .status-in-progress { background-color: #e3f2fd; color: #1565c0; }
+            .status-todo, .status-not-started { background-color: #f5f5f5; color: #424242; }
+          </style>
+        </head>
+        <body>
+          <h1>Meeting Tasks</h1>
+          <p>Generated on: ${new Date().toLocaleDateString()}</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Task Description</th>
+                <th>Category</th>
+                <th>Priority</th>
+                <th>Status</th>
+                <th>Due Date</th>
+                <th>Assigned To</th>
+                <th>Remarks</th>
+                <th>Additional Info</th>
+              </tr>
+            </thead>
+            <tbody>
+    `;
+
+    tasks.forEach(task => {
+      html += `
+        <tr>
+          <td>${task.actionItem}</td>
+          <td>${task.category}</td>
+          <td class="priority-${task.priority.toLowerCase()}">${task.priority}</td>
+          <td class="status-${task.status.toLowerCase().replace(' ', '-')}">${task.status}</td>
+          <td>${task.dueDate || 'Not set'}</td>
+          <td>${task.assignedTo || 'Unassigned'}</td>
+          <td>${task.remarks || 'No remarks'}</td>
+          <td>${task.additionalInfo || 'No additional info'}</td>
+        </tr>
+      `;
+    });
+
+    html += `
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `;
+
+    return html;
+  };
+
+  const openOutlookWithTasks = () => {
+    const htmlContent = formatTasksAsHTML();
+    const subject = encodeURIComponent('Meeting Tasks Report');
+    const body = encodeURIComponent(htmlContent);
+    const recipient = 'rishikesh@jsspro.com';
+    
+    const mailtoURL = `mailto:${recipient}?subject=${subject}&body=${body}`;
+    
+    try {
+      window.location.href = mailtoURL;
+      toast({
+        title: "Opening email client",
+        description: "Your default email application should open with the tasks"
+      });
+    } catch (error) {
+      toast({
+        title: "Error opening email",
+        description: "Could not open email client. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
   const SortableHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
     <th 
       className="border border-border p-2 text-left font-semibold min-w-[120px] cursor-pointer hover:bg-muted/30 transition-colors"
@@ -234,6 +323,14 @@ export function TasksTab({ meetingId }: TasksTabProps) {
           <h2 className="text-xl font-semibold text-foreground">Tasks</h2>
           <p className="text-muted-foreground">Consolidated tasks from merged action items</p>
         </div>
+        <Button 
+          onClick={openOutlookWithTasks}
+          className="flex items-center gap-2"
+          disabled={tasks.length === 0}
+        >
+          <Mail className="h-4 w-4" />
+          Send Email to Participants
+        </Button>
       </div>
 
       {/* Excel-like Grid */}
