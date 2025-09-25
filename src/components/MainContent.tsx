@@ -42,34 +42,34 @@ export function MainContent({ meetingId }: MainContentProps) {
 
       <div className="flex-1 p-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
-          <TabsList className="grid w-full grid-cols-4 mb-6 bg-muted/50">
+          <TabsList className="grid w-full grid-cols-4 mb-6 h-12 bg-card border border-border shadow-sm">
             <TabsTrigger 
               value="tasks" 
-              className="flex items-center gap-2 data-[state=active]:bg-teams-blue data-[state=active]:text-white"
+              className="flex items-center gap-2 h-10 px-4 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all duration-200"
             >
               <ClipboardList className="h-4 w-4" />
-              Tasks
+              <span className="font-medium">Tasks</span>
             </TabsTrigger>
             <TabsTrigger 
               value="action-items" 
-              className="flex items-center gap-2 data-[state=active]:bg-teams-blue data-[state=active]:text-white"
+              className="flex items-center gap-2 h-10 px-4 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all duration-200"
             >
               <CheckSquare className="h-4 w-4" />
-              Action Items
+              <span className="font-medium">Action Items</span>
             </TabsTrigger>
             <TabsTrigger 
               value="documents"
-              className="flex items-center gap-2 data-[state=active]:bg-teams-blue data-[state=active]:text-white"
+              className="flex items-center gap-2 h-10 px-4 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all duration-200"
             >
               <FileText className="h-4 w-4" />
-              Documents
+              <span className="font-medium">Documents</span>
             </TabsTrigger>
             <TabsTrigger 
               value="data-chunks"
-              className="flex items-center gap-2 data-[state=active]:bg-teams-blue data-[state=active]:text-white"
+              className="flex items-center gap-2 h-10 px-4 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all duration-200"
             >
               <Database className="h-4 w-4" />
-              Data Chunks
+              <span className="font-medium">Data Chunks</span>
             </TabsTrigger>
           </TabsList>
 
