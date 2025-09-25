@@ -14,7 +14,7 @@ serve(async (req) => {
   }
 
   try {
-    const { meetingId, actionItems, currentBusinessRequirements } = await req.json();
+    const { meetingId } = await req.json();
     
     console.log('Processing business requirements update for meeting:', meetingId);
     
@@ -28,6 +28,78 @@ serve(async (req) => {
     if (!azureApiKey) {
       throw new Error('Azure OpenAI API key not configured');
     }
+
+    // Fetch all action items for this meeting from database
+    console.log('Fetching action items for meeting:', meetingId);
+    const { data: actionItemsData, error: actionItemsError } = await supabase
+      .from('action_items')
+      .select('*')
+      .eq('meeting_id', meetingId)
+      .order('created_at', { ascending: false });
+
+    if (actionItemsError) {
+      console.error('Error fetching action items:', actionItemsError);
+      throw new Error(`Failed to fetch action items: ${actionItemsError.message}`);
+    }
+
+    if (!actionItemsData || actionItemsData.length === 0) {
+      throw new Error('No action items found for this meeting');
+    }
+
+    console.log(`Found ${actionItemsData.length} action items`);
+
+    // Fetch latest business requirements from database
+    console.log('Fetching latest business requirements for meeting:', meetingId);
+    const { data: currentBRData, error: brError } = await supabase
+      .from('business_requirements')
+      .select('content, version')
+      .eq('meeting_id', meetingId)
+      .order('version', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (brError && brError.code !== 'PGRST116') { // PGRST116 is "no rows returned"
+      console.error('Error fetching business requirements:', brError);
+      throw new Error(`Failed to fetch business requirements: ${brError.message}`);
+    }
+
+    const currentBusinessRequirements = currentBRData?.content || `# Business Requirements Document
+
+## 1. Project Overview
+**Project Name:** [Project Name]
+**Date:** ${new Date().toLocaleDateString()}
+**Stakeholders:** [List key stakeholders]
+**Document Version:** 1.0
+
+## 2. Executive Summary
+Provide a high-level overview of the project, its objectives, and expected outcomes.
+
+## 3. Business Objectives
+### Primary Objectives:
+- Please define based on action items and meeting context
+
+### Success Metrics:
+- To be defined based on project requirements
+
+## 4. Functional Requirements
+### Core Features
+- Requirements to be derived from action items and meeting discussions
+
+Please update this template with relevant information based on the action items.`;
+
+    console.log(`Using business requirements version: ${currentBRData?.version || 'new document'}`);
+
+    // Transform action items for the prompt
+    const actionItems = actionItemsData.map(item => ({
+      action_item: item.action_item,
+      category: item.category || 'General',
+      priority: item.priority || 'Medium',
+      status: item.status || 'Not Started',
+      due_date: item.due_date,
+      assigned_to: item.assigned_to || 'Unassigned',
+      remarks: item.remarks || '',
+      additional_info: item.additional_info || ''
+    }));
 
     // Prepare the prompt for Azure OpenAI
     const systemPrompt = `You are a business analyst expert. Your task is to generate comprehensive business requirements based on action items from meetings and existing business requirements.
@@ -53,10 +125,24 @@ ${currentBusinessRequirements}
 
 Action Items from Meeting:
 ${actionItems.map((item: any, index: number) => 
-  `${index + 1}. ${item.action_item} (Priority: ${item.priority}, Status: ${item.status}, Category: ${item.category || 'General'})`
-).join('\n')}
+  `${index + 1}. ${item.action_item}
+   - Priority: ${item.priority}
+   - Status: ${item.status} 
+   - Category: ${item.category}
+   - Assigned To: ${item.assigned_to}
+   - Due Date: ${item.due_date || 'Not set'}
+   - Remarks: ${item.remarks}
+   - Additional Info: ${item.additional_info}`
+).join('\n\n')}
 
-Please generate an updated Business Requirements Document that incorporates these action items into a comprehensive BRD structure.`;
+Please generate an updated Business Requirements Document that incorporates these action items into a comprehensive BRD structure. Make sure to:
+1. Update the project overview based on the action items context
+2. Derive functional requirements from the action items
+3. Set appropriate priorities based on action item priorities
+4. Include timeline considerations based on due dates
+5. Incorporate assigned responsibilities into the requirements
+6. Update risk assessments based on action item categories and remarks
+7. Ensure all action items are properly reflected in the relevant BRD sections`;
 
     // Call Azure OpenAI
     const azureResponse = await fetch('https://jss-azure-open-ai.openai.azure.com/openai/deployments/jss-gpt-4o/chat/completions?api-version=2025-01-01-preview', {
@@ -84,16 +170,8 @@ Please generate an updated Business Requirements Document that incorporates thes
     const azureData = await azureResponse.json();
     const generatedContent = azureData.choices[0].message.content;
 
-    // Get the latest version number for this meeting
-    const { data: latestVersion } = await supabase
-      .from('business_requirements')
-      .select('version')
-      .eq('meeting_id', meetingId)
-      .order('version', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    const newVersion = latestVersion ? latestVersion.version + 1 : 1;
+    // Calculate new version number
+    const newVersion = currentBRData ? currentBRData.version + 1 : 1;
 
     // Store the new business requirements
     const { data, error } = await supabase

@@ -396,33 +396,9 @@ export function ActionItemsTab({ meetingId }: ActionItemsTabProps) {
 
   const handleUpdateBusinessRequirements = async () => {
     try {
-      // Get current business requirements from the Business Requirements tab
-      const { data: currentBRData } = await supabase
-        .from('business_requirements')
-        .select('content')
-        .eq('meeting_id', meetingId)
-        .order('version', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      const currentBusinessRequirements = currentBRData?.content || `# Business Requirements Document
-
-## 1. Project Overview
-**Project Name:** [Project Name]
-**Date:** ${new Date().toLocaleDateString()}
-**Stakeholders:** [List key stakeholders]
-**Document Version:** 1.0
-
-## 2. Executive Summary
-Provide a high-level overview of the project, its objectives, and expected outcomes.
-
-Please update this template with relevant information based on the action items.`;
-
       const { data, error } = await supabase.functions.invoke('update-business-requirements', {
         body: { 
-          meetingId: meetingId,
-          actionItems: actionItems,
-          currentBusinessRequirements: currentBusinessRequirements
+          meetingId: meetingId
         }
       });
 
