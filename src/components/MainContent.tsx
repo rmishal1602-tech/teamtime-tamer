@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TasksTab } from "@/components/TasksTab";
 import { ActionItemsTab } from "@/components/ActionItemsTab";
 import { DocumentsTab } from "@/components/DocumentsTab";
 import { DataChunksTab } from "@/components/DataChunksTab";
-import { CheckSquare, FileText, Database } from "lucide-react";
+import { CheckSquare, FileText, Database, ClipboardList } from "lucide-react";
 import { DataChunk } from "@/lib/documentProcessor";
 
 interface MainContentProps {
@@ -11,7 +12,7 @@ interface MainContentProps {
 }
 
 export function MainContent({ meetingId }: MainContentProps) {
-  const [activeTab, setActiveTab] = useState("action-items");
+  const [activeTab, setActiveTab] = useState("tasks");
   const [dataChunks, setDataChunks] = useState<DataChunk[]>([]);
 
   const handleDataChunksGenerated = (newChunks: DataChunk[]) => {
@@ -41,7 +42,14 @@ export function MainContent({ meetingId }: MainContentProps) {
 
       <div className="flex-1 p-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
-          <TabsList className="grid w-full grid-cols-3 mb-6 bg-muted/50">
+          <TabsList className="grid w-full grid-cols-4 mb-6 bg-muted/50">
+            <TabsTrigger 
+              value="tasks" 
+              className="flex items-center gap-2 data-[state=active]:bg-teams-blue data-[state=active]:text-white"
+            >
+              <ClipboardList className="h-4 w-4" />
+              Tasks
+            </TabsTrigger>
             <TabsTrigger 
               value="action-items" 
               className="flex items-center gap-2 data-[state=active]:bg-teams-blue data-[state=active]:text-white"
@@ -66,6 +74,10 @@ export function MainContent({ meetingId }: MainContentProps) {
           </TabsList>
 
           <div className="flex-1 min-h-0">
+            <TabsContent value="tasks" className="h-full mt-0">
+              <TasksTab meetingId={meetingId} />
+            </TabsContent>
+            
             <TabsContent value="action-items" className="h-full mt-0">
               <ActionItemsTab meetingId={meetingId} />
             </TabsContent>
