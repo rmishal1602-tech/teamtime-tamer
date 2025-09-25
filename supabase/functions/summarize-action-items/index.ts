@@ -130,30 +130,57 @@ Rules:
     let consolidatedTasks;
     try {
       const aiResponse = azureData.choices[0].message.content;
-      console.log('AI Response:', aiResponse);
+      console.log('AI Response (first 200 chars):', aiResponse.substring(0, 200));
+      console.log('AI Response includes ```json:', aiResponse.includes('```json'));
+      console.log('AI Response includes ```:', aiResponse.includes('```'));
       
       // Extract JSON from markdown code blocks if present
-      let jsonString = aiResponse;
-      if (aiResponse.includes('```json')) {
-        const jsonMatch = aiResponse.match(/```json\s*([\s\S]*?)\s*```/);
-        if (jsonMatch && jsonMatch[1]) {
-          jsonString = jsonMatch[1].trim();
+      let jsonString = aiResponse.trim();
+      
+      // Handle markdown code blocks
+      if (jsonString.startsWith('```')) {
+        console.log('Detected markdown code block');
+        // Find the first occurrence of ``` and remove everything before the actual content
+        const lines = jsonString.split('\n');
+        let startIndex = 0;
+        let endIndex = lines.length;
+        
+        // Find start index (skip the opening ```)
+        for (let i = 0; i < lines.length; i++) {
+          if (lines[i].trim().startsWith('```')) {
+            startIndex = i + 1;
+            break;
+          }
         }
-      } else if (aiResponse.includes('```')) {
-        const codeMatch = aiResponse.match(/```\s*([\s\S]*?)\s*```/);
-        if (codeMatch && codeMatch[1]) {
-          jsonString = codeMatch[1].trim();
+        
+        // Find end index (before the closing ```)
+        for (let i = lines.length - 1; i >= 0; i--) {
+          if (lines[i].trim() === '```') {
+            endIndex = i;
+            break;
+          }
         }
+        
+        jsonString = lines.slice(startIndex, endIndex).join('\n').trim();
+        console.log('Extracted JSON (first 200 chars):', jsonString.substring(0, 200));
       }
       
-      console.log('Extracted JSON:', jsonString);
+      // Validate that it looks like JSON
+      if (!jsonString.startsWith('[') && !jsonString.startsWith('{')) {
+        throw new Error('Extracted content does not appear to be valid JSON');
+      }
       
       // Parse the JSON response
       consolidatedTasks = JSON.parse(jsonString);
+      console.log('Successfully parsed', consolidatedTasks.length, 'tasks');
     } catch (parseError) {
       console.error('Error parsing AI response:', parseError);
+      console.error('Raw response:', azureData.choices[0].message.content);
       return new Response(
-        JSON.stringify({ error: 'Failed to parse AI response' }),
+        JSON.stringify({ 
+          error: 'Failed to parse AI response', 
+          details: parseError instanceof Error ? parseError.message : 'Unknown parsing error'
+        }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
