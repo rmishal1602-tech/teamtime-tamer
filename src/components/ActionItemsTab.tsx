@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,6 +21,7 @@ interface ActionItem {
   additionalInfo: string;
   assignedTo: string;
   sourceDocument?: string;
+  lastModified: string;
 }
 
 type SortField = keyof ActionItem;
@@ -35,7 +37,8 @@ const dummyActionItems: ActionItem[] = [
     dueDate: "2024-01-25",
     remarks: "Waiting for stakeholder feedback",
     additionalInfo: "Include mobile app features",
-    assignedTo: "Sarah Johnson"
+    assignedTo: "Sarah Johnson",
+    lastModified: "2024-01-23T10:30:00Z"
   },
   {
     id: "2", 
@@ -46,7 +49,8 @@ const dummyActionItems: ActionItem[] = [
     dueDate: "2024-01-30",
     remarks: "Focus on new API endpoints",
     additionalInfo: "Include code examples",
-    assignedTo: "Mike Chen"
+    assignedTo: "Mike Chen",
+    lastModified: "2024-01-22T14:15:00Z"
   },
   {
     id: "3",
@@ -57,7 +61,8 @@ const dummyActionItems: ActionItem[] = [
     dueDate: "2024-01-20",
     remarks: "No critical issues found",
     additionalInfo: "Report sent to compliance team",
-    assignedTo: "Alex Rodriguez"
+    assignedTo: "Alex Rodriguez",
+    lastModified: "2024-01-21T09:45:00Z"
   }
 ];
 
@@ -126,7 +131,8 @@ export function ActionItemsTab({ meetingId }: ActionItemsTabProps) {
         remarks: item.remarks || '',
         additionalInfo: item.additional_info || '',
         assignedTo: item.assigned_to || '',
-        sourceDocument: sourceDocuments.length > 0 ? sourceDocuments[0] : undefined
+        sourceDocument: sourceDocuments.length > 0 ? sourceDocuments[0] : undefined,
+        lastModified: item.updated_at || item.created_at || new Date().toISOString()
       }));
 
       setActionItems(transformedItems.length > 0 ? transformedItems : dummyActionItems);
@@ -218,7 +224,8 @@ export function ActionItemsTab({ meetingId }: ActionItemsTabProps) {
                 dueDate: editForm.dueDate || item.dueDate,
                 remarks: editForm.remarks || item.remarks,
                 additionalInfo: editForm.additionalInfo || item.additionalInfo,
-                assignedTo: editForm.assignedTo || item.assignedTo
+                assignedTo: editForm.assignedTo || item.assignedTo,
+                lastModified: new Date().toISOString()
               }
             : item
         ));
@@ -296,7 +303,8 @@ export function ActionItemsTab({ meetingId }: ActionItemsTabProps) {
       dueDate: "",
       remarks: "",
       additionalInfo: "",
-      assignedTo: ""
+      assignedTo: "",
+      lastModified: new Date().toISOString()
     };
 
     // Check if meetingId is valid UUID to determine if we should save to database
@@ -390,9 +398,9 @@ export function ActionItemsTab({ meetingId }: ActionItemsTabProps) {
                   <SortableHeader field="assignedTo">Assigned To</SortableHeader>
                   <SortableHeader field="remarks">Remarks</SortableHeader>
                   <SortableHeader field="additionalInfo">Additional Info</SortableHeader>
-                  <th className="border border-border p-2 text-center font-semibold w-[100px]">Action</th>
+                  <th className="border border-border p-2 text-center font-semibold w-[120px]">Action</th>
                   <th className="border border-border p-2 text-center font-semibold w-[120px]">References</th>
-                  <th className="border border-border p-2 text-center font-semibold w-[100px]">Edit</th>
+                  <SortableHeader field="lastModified">Last Modified</SortableHeader>
                 </tr>
               </thead>
               <tbody>
@@ -400,11 +408,17 @@ export function ActionItemsTab({ meetingId }: ActionItemsTabProps) {
                   <tr key={item.id} className="hover:bg-muted/30 transition-colors">
                     <td className="border border-border p-2">
                       {editingId === item.id ? (
-                        <Input
+                        <Textarea
                           value={editForm.actionItem || ""}
                           onChange={(e) => setEditForm(prev => ({ ...prev, actionItem: e.target.value }))}
-                          className="w-full border-none p-1 focus:ring-1 focus:ring-teams-blue"
+                          className="w-full border-none p-1 focus:ring-1 focus:ring-teams-blue resize-none min-h-[24px]"
                           autoFocus
+                          rows={1}
+                          onInput={(e) => {
+                            const target = e.target as HTMLTextAreaElement;
+                            target.style.height = 'auto';
+                            target.style.height = target.scrollHeight + 'px';
+                          }}
                         />
                       ) : (
                         <div className="p-1 cursor-pointer hover:bg-muted/20 rounded" onClick={() => startEdit(item)}>
@@ -494,11 +508,17 @@ export function ActionItemsTab({ meetingId }: ActionItemsTabProps) {
                     </td>
                     <td className="border border-border p-2">
                       {editingId === item.id ? (
-                        <Input
+                        <Textarea
                           value={editForm.assignedTo || ""}
                           onChange={(e) => setEditForm(prev => ({ ...prev, assignedTo: e.target.value }))}
-                          className="w-full border-none p-1 focus:ring-1 focus:ring-teams-blue"
+                          className="w-full border-none p-1 focus:ring-1 focus:ring-teams-blue resize-none min-h-[24px]"
                           placeholder="Enter name"
+                          rows={1}
+                          onInput={(e) => {
+                            const target = e.target as HTMLTextAreaElement;
+                            target.style.height = 'auto';
+                            target.style.height = target.scrollHeight + 'px';
+                          }}
                         />
                       ) : (
                         <div className="p-1 cursor-pointer hover:bg-muted/20 rounded" onClick={() => startEdit(item)}>
@@ -508,11 +528,17 @@ export function ActionItemsTab({ meetingId }: ActionItemsTabProps) {
                     </td>
                     <td className="border border-border p-2">
                       {editingId === item.id ? (
-                        <Input
+                        <Textarea
                           value={editForm.remarks || ""}
                           onChange={(e) => setEditForm(prev => ({ ...prev, remarks: e.target.value }))}
-                          className="w-full border-none p-1 focus:ring-1 focus:ring-teams-blue"
+                          className="w-full border-none p-1 focus:ring-1 focus:ring-teams-blue resize-none min-h-[24px]"
                           placeholder="Add remarks"
+                          rows={1}
+                          onInput={(e) => {
+                            const target = e.target as HTMLTextAreaElement;
+                            target.style.height = 'auto';
+                            target.style.height = target.scrollHeight + 'px';
+                          }}
                         />
                       ) : (
                         <div className="p-1 cursor-pointer hover:bg-muted/20 rounded" onClick={() => startEdit(item)}>
@@ -522,11 +548,17 @@ export function ActionItemsTab({ meetingId }: ActionItemsTabProps) {
                     </td>
                     <td className="border border-border p-2">
                       {editingId === item.id ? (
-                        <Input
+                        <Textarea
                           value={editForm.additionalInfo || ""}
                           onChange={(e) => setEditForm(prev => ({ ...prev, additionalInfo: e.target.value }))}
-                          className="w-full border-none p-1 focus:ring-1 focus:ring-teams-blue"
+                          className="w-full border-none p-1 focus:ring-1 focus:ring-teams-blue resize-none min-h-[24px]"
                           placeholder="Additional details"
+                          rows={1}
+                          onInput={(e) => {
+                            const target = e.target as HTMLTextAreaElement;
+                            target.style.height = 'auto';
+                            target.style.height = target.scrollHeight + 'px';
+                          }}
                         />
                       ) : (
                         <div className="p-1 cursor-pointer hover:bg-muted/20 rounded" onClick={() => startEdit(item)}>
@@ -535,7 +567,7 @@ export function ActionItemsTab({ meetingId }: ActionItemsTabProps) {
                       )}
                     </td>
                     <td className="border border-border p-2">
-                      <div className="flex items-center justify-center">
+                      <div className="flex items-center justify-center gap-1">
                         <Button 
                           size="sm" 
                           variant="outline" 
@@ -545,6 +577,20 @@ export function ActionItemsTab({ meetingId }: ActionItemsTabProps) {
                           <Bell className="h-3 w-3 mr-1" />
                           Remind
                         </Button>
+                        {editingId === item.id ? (
+                          <>
+                            <Button size="sm" variant="ghost" onClick={saveEdit} className="h-7 w-7 p-0 text-green-600 hover:text-green-700">
+                              <Save className="h-3 w-3" />
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={cancelEdit} className="h-7 w-7 p-0 text-red-600 hover:text-red-700">
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </>
+                        ) : (
+                          <Button size="sm" variant="ghost" onClick={() => startEdit(item)} className="h-7 w-7 p-0 text-blue-600 hover:text-blue-700">
+                            <Edit className="h-3 w-3" />
+                          </Button>
+                        )}
                       </div>
                     </td>
                     <td className="border border-border p-2">
@@ -562,21 +608,21 @@ export function ActionItemsTab({ meetingId }: ActionItemsTabProps) {
                       </div>
                     </td>
                     <td className="border border-border p-2">
-                      <div className="flex items-center justify-center gap-1">
-                        {editingId === item.id ? (
-                          <>
-                            <Button size="sm" variant="ghost" onClick={saveEdit} className="h-7 w-7 p-0 text-green-600 hover:text-green-700">
-                              <Save className="h-3 w-3" />
-                            </Button>
-                            <Button size="sm" variant="ghost" onClick={cancelEdit} className="h-7 w-7 p-0 text-red-600 hover:text-red-700">
-                              <X className="h-3 w-3" />
-                            </Button>
-                          </>
-                        ) : (
-                          <Button size="sm" variant="ghost" onClick={() => startEdit(item)} className="h-7 w-7 p-0 text-blue-600 hover:text-blue-700">
-                            <Edit className="h-3 w-3" />
-                          </Button>
-                        )}
+                      <div className="flex items-center justify-center">
+                        <div className="text-xs text-muted-foreground">
+                          {new Date(item.lastModified).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric'
+                          })}
+                          <br />
+                          <span className="text-[10px]">
+                            {new Date(item.lastModified).toLocaleTimeString('en-US', {
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </span>
+                        </div>
                       </div>
                     </td>
                   </tr>
