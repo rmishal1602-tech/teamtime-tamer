@@ -198,9 +198,31 @@ Rules:
       );
     }
 
+    // Validate and prepare user ID
+    let validUserId = userId;
+    if (!validUserId || validUserId === 'demo-user') {
+      // Try to get user ID from action items, but validate it's a proper UUID
+      const fallbackUserId = actionItems[0]?.user_id;
+      if (fallbackUserId && fallbackUserId !== 'demo-user') {
+        // Check if it's a valid UUID format
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (uuidRegex.test(fallbackUserId)) {
+          validUserId = fallbackUserId;
+        } else {
+          // Generate a temporary UUID for demo purposes
+          validUserId = '00000000-0000-0000-0000-000000000000';
+        }
+      } else {
+        // Generate a temporary UUID for demo purposes
+        validUserId = '00000000-0000-0000-0000-000000000000';
+      }
+    }
+
+    console.log('Using user ID for tasks:', validUserId);
+
     // Insert consolidated tasks into the tasks table
     const tasksToInsert = consolidatedTasks.map((task: any) => ({
-      user_id: userId || actionItems[0].user_id,
+      user_id: validUserId,
       meeting_id: meetingId,
       action_item: task.action_item,
       priority: task.priority || 'Medium',
