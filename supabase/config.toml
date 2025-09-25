@@ -9,3 +9,6 @@ max_rows = 1000
 
 [functions.process-document]
 verify_jwt = false
+
+[functions.summarize-action-items]
+verify_jwt = false

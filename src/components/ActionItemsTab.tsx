@@ -361,6 +361,39 @@ export function ActionItemsTab({ meetingId }: ActionItemsTabProps) {
     setEditForm(newItem);
   };
 
+  const handleSummarizeActionItems = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('summarize-action-items', {
+        body: { 
+          meetingId: meetingId,
+          userId: 'demo-user' // Replace with actual user ID when auth is implemented
+        }
+      });
+
+      if (error) {
+        console.error('Error summarizing action items:', error);
+        toast({
+          title: "Error",
+          description: "Failed to summarize action items. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Success",
+        description: `${data.tasksCreated} consolidated tasks created successfully!`,
+      });
+    } catch (error) {
+      console.error('Error calling summarize function:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred while summarizing action items.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="h-full flex flex-col gap-6">
       <div className="flex justify-between items-center">
@@ -368,13 +401,23 @@ export function ActionItemsTab({ meetingId }: ActionItemsTabProps) {
           <h2 className="text-xl font-semibold text-foreground">Action Items</h2>
           <p className="text-muted-foreground">Track and manage meeting action items</p>
         </div>
-        <Button 
-          onClick={addNewItem}
-          className="bg-teams-blue hover:bg-teams-blue/90"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add Action Item
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            onClick={handleSummarizeActionItems}
+            variant="secondary"
+            className="bg-purple-100 hover:bg-purple-200 text-purple-700"
+            disabled={actionItems.length === 0}
+          >
+            Summarize/Merge Action Items
+          </Button>
+          <Button 
+            onClick={addNewItem}
+            className="bg-teams-blue hover:bg-teams-blue/90"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Action Item
+          </Button>
+        </div>
       </div>
 
       {/* Excel-like Grid */}
