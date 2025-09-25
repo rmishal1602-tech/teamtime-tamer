@@ -122,8 +122,48 @@ serve(async (req) => {
           
           if (content) {
             try {
-              console.log('Azure OpenAI response:', content);
-              const actionItems = JSON.parse(content);
+              console.log('Azure OpenAI response (first 200 chars):', content.substring(0, 200));
+              console.log('AI Response includes ```json:', content.includes('```json'));
+              console.log('AI Response includes ```:', content.includes('```'));
+              
+              // Extract JSON from markdown code blocks if present
+              let jsonString = content.trim();
+              
+              // Handle markdown code blocks
+              if (jsonString.startsWith('```')) {
+                console.log('Detected markdown code block');
+                // Find the first occurrence of ``` and remove everything before the actual content
+                const lines = jsonString.split('\n');
+                let startIndex = 0;
+                let endIndex = lines.length;
+                
+                // Find start index (skip the opening ```)
+                for (let i = 0; i < lines.length; i++) {
+                  if (lines[i].trim().startsWith('```')) {
+                    startIndex = i + 1;
+                    break;
+                  }
+                }
+                
+                // Find end index (before the closing ```)
+                for (let i = lines.length - 1; i >= 0; i--) {
+                  if (lines[i].trim() === '```') {
+                    endIndex = i;
+                    break;
+                  }
+                }
+                
+                jsonString = lines.slice(startIndex, endIndex).join('\n').trim();
+                console.log('Extracted JSON (first 200 chars):', jsonString.substring(0, 200));
+              }
+              
+              // Validate that it looks like JSON
+              if (!jsonString.startsWith('[') && !jsonString.startsWith('{')) {
+                throw new Error('Extracted content does not appear to be valid JSON');
+              }
+              
+              // Parse the JSON response
+              const actionItems = JSON.parse(jsonString);
               if (Array.isArray(actionItems)) {
                 allActionItems.push(...actionItems);
                 console.log(`Extracted ${actionItems.length} action items from chunk ${i + 1}`);
@@ -131,7 +171,9 @@ serve(async (req) => {
                 console.log('Response was not an array:', actionItems);
               }
             } catch (parseError) {
-              console.error('Error parsing Azure OpenAI response:', parseError, 'Content:', content);
+              console.error('Error parsing Azure OpenAI response:', parseError);
+              console.error('Raw response:', content);
+              // Continue processing other chunks even if this one fails
             }
           } else {
             console.log('No content in Azure OpenAI response');
