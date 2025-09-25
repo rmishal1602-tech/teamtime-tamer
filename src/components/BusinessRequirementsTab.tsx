@@ -3,7 +3,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Save, Edit3, FileText, Clock } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Save, Edit3, FileText, Clock, History } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -142,17 +143,28 @@ Provide a high-level overview of the project, its objectives, and expected outco
 ---
 *This document serves as the foundation for project planning and development activities.*`;
 
+interface BusinessRequirement {
+  id: string;
+  content: string;
+  version: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export function BusinessRequirementsTab({ meetingId }: BusinessRequirementsTabProps) {
   const [content, setContent] = useState(defaultTemplate);
   const [isEditing, setIsEditing] = useState(false);
   const [originalContent, setOriginalContent] = useState(defaultTemplate);
   const [isLoading, setIsLoading] = useState(false);
   const [currentVersion, setCurrentVersion] = useState<number>(1);
+  const [selectedVersion, setSelectedVersion] = useState<number | null>(null);
+  const [versions, setVersions] = useState<BusinessRequirement[]>([]);
   const { toast } = useToast();
 
   // Load business requirements from database
   useEffect(() => {
     loadBusinessRequirements();
+    loadAllVersions();
   }, [meetingId]);
 
   // Listen for updates from the ActionItemsTab
@@ -160,6 +172,8 @@ export function BusinessRequirementsTab({ meetingId }: BusinessRequirementsTabPr
     const handleBusinessRequirementsUpdate = (event: CustomEvent) => {
       setContent(event.detail.content);
       setCurrentVersion(event.detail.version);
+      setSelectedVersion(event.detail.version);
+      loadAllVersions(); // Refresh versions list
       toast({
         title: "Business Requirements Updated",
         description: `New version ${event.detail.version} loaded from AI generation.`
@@ -201,10 +215,12 @@ export function BusinessRequirementsTab({ meetingId }: BusinessRequirementsTabPr
       if (data) {
         setContent(data.content);
         setCurrentVersion(data.version);
+        setSelectedVersion(data.version);
         setOriginalContent(data.content);
       } else {
         setContent(defaultTemplate);
         setCurrentVersion(1);
+        setSelectedVersion(1);
         setOriginalContent(defaultTemplate);
       }
     } catch (error) {
@@ -213,6 +229,52 @@ export function BusinessRequirementsTab({ meetingId }: BusinessRequirementsTabPr
       setCurrentVersion(1);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadAllVersions = async () => {
+    try {
+      // Only try to load from database if meetingId is a valid UUID
+      const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(meetingId);
+      
+      if (!isValidUUID) {
+        setVersions([]);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('business_requirements')
+        .select('*')
+        .eq('meeting_id', meetingId)
+        .order('version', { ascending: false });
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
+        console.error('Error loading business requirements versions:', error);
+        setVersions([]);
+        return;
+      }
+
+      setVersions(data || []);
+    } catch (error) {
+      console.error('Error loading business requirements versions:', error);
+      setVersions([]);
+    }
+  };
+
+  const handleVersionChange = async (versionNumber: string) => {
+    const version = parseInt(versionNumber);
+    setSelectedVersion(version);
+    
+    // Find and load the selected version
+    const selectedVersionData = versions.find(v => v.version === version);
+    if (selectedVersionData) {
+      setContent(selectedVersionData.content);
+      setOriginalContent(selectedVersionData.content);
+      
+      // Exit edit mode if currently editing
+      if (isEditing) {
+        setIsEditing(false);
+      }
     }
   };
 
@@ -259,6 +321,8 @@ export function BusinessRequirementsTab({ meetingId }: BusinessRequirementsTabPr
         }
 
         setCurrentVersion(newVersion);
+        setSelectedVersion(newVersion);
+        loadAllVersions(); // Refresh versions list
         toast({
           title: "Business Requirements Saved",
           description: `Document saved successfully as version ${newVersion}.`
@@ -300,10 +364,35 @@ export function BusinessRequirementsTab({ meetingId }: BusinessRequirementsTabPr
               </CardTitle>
               <Badge variant="secondary" className="flex items-center gap-1">
                 <Clock className="h-3 w-3" />
-                v{currentVersion}
+                v{selectedVersion || currentVersion}
               </Badge>
             </div>
             <div className="flex gap-2">
+              {versions.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <History className="h-4 w-4 text-muted-foreground" />
+                  <Select
+                    value={selectedVersion?.toString() || currentVersion.toString()}
+                    onValueChange={handleVersionChange}
+                    disabled={isEditing}
+                  >
+                    <SelectTrigger className="w-32 h-8 text-xs bg-background border border-border shadow-sm z-50">
+                      <SelectValue placeholder="Version" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background border border-border shadow-lg z-50">
+                      {versions.map((version) => (
+                        <SelectItem 
+                          key={version.id} 
+                          value={version.version.toString()}
+                          className="hover:bg-muted cursor-pointer"
+                        >
+                          Version {version.version} - {new Date(version.created_at).toLocaleDateString()}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               {isEditing ? (
                 <>
                   <Button 
@@ -324,7 +413,7 @@ export function BusinessRequirementsTab({ meetingId }: BusinessRequirementsTabPr
                   onClick={handleEdit} 
                   size="sm" 
                   className="flex items-center gap-2"
-                  disabled={isLoading}
+                  disabled={isLoading || (selectedVersion !== null && selectedVersion !== currentVersion)}
                 >
                   <Edit3 className="h-4 w-4" />
                   Edit
