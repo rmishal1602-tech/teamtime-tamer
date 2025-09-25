@@ -106,7 +106,7 @@ serve(async (req) => {
                   content: `Extract action items from this meeting transcript chunk:\n\n${chunk.text}`
                 }
               ],
-              max_tokens: 1000,
+              max_tokens: 4000,
               temperature: 0.3
             }),
           });
@@ -162,8 +162,25 @@ serve(async (req) => {
                 throw new Error('Extracted content does not appear to be valid JSON');
               }
               
+              // Try to repair truncated JSON if needed
+              let repairedJsonString = jsonString;
+              if (jsonString.startsWith('[') && !jsonString.trim().endsWith(']')) {
+                console.log('Detected potentially truncated JSON array, attempting to repair...');
+                
+                // Find the last complete object by looking for the last '}' followed by optional whitespace/comma
+                const lastCompleteObjectMatch = jsonString.match(/^(.*})\s*,?\s*[^}]*$/);
+                if (lastCompleteObjectMatch) {
+                  repairedJsonString = lastCompleteObjectMatch[1] + '\n]';
+                  console.log('Repaired JSON by truncating incomplete object');
+                } else {
+                  // If we can't find a complete object, try to close the array
+                  repairedJsonString = jsonString.replace(/,\s*$/, '') + '\n]';
+                  console.log('Repaired JSON by closing array');
+                }
+              }
+              
               // Parse the JSON response
-              const actionItems = JSON.parse(jsonString);
+              const actionItems = JSON.parse(repairedJsonString);
               if (Array.isArray(actionItems)) {
                 allActionItems.push(...actionItems);
                 console.log(`Extracted ${actionItems.length} action items from chunk ${i + 1}`);
