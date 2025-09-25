@@ -4,8 +4,9 @@ import { TasksTab } from "@/components/TasksTab";
 import { ActionItemsTab } from "@/components/ActionItemsTab";
 import { DocumentsTab } from "@/components/DocumentsTab";
 import { DataChunksTab } from "@/components/DataChunksTab";
-import { CheckSquare, FileText, Database, ClipboardList } from "lucide-react";
+import { CheckSquare, FileText, Database, ClipboardList, Briefcase } from "lucide-react";
 import { DataChunk } from "@/lib/documentProcessor";
+import { BusinessRequirementsTab } from "@/components/BusinessRequirementsTab";
 
 interface MainContentProps {
   meetingId: string;
@@ -42,7 +43,7 @@ export function MainContent({ meetingId }: MainContentProps) {
 
       <div className="flex-1 p-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
-          <TabsList className="grid w-full grid-cols-4 mb-6 h-12 bg-card border border-border shadow-sm">
+          <TabsList className="grid w-full grid-cols-5 mb-6 h-12 bg-card border border-border shadow-sm">
             <TabsTrigger 
               value="tasks" 
               className="flex items-center gap-2 h-10 px-4 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all duration-200"
@@ -56,6 +57,13 @@ export function MainContent({ meetingId }: MainContentProps) {
             >
               <CheckSquare className="h-4 w-4" />
               <span className="font-medium">Action Items</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="business-requirements"
+              className="flex items-center gap-2 h-10 px-4 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all duration-200"
+            >
+              <Briefcase className="h-4 w-4" />
+              <span className="font-medium">Business Requirements</span>
             </TabsTrigger>
             <TabsTrigger 
               value="documents"
@@ -80,6 +88,10 @@ export function MainContent({ meetingId }: MainContentProps) {
             
             <TabsContent value="action-items" className="h-full mt-0">
               <ActionItemsTab meetingId={meetingId} />
+            </TabsContent>
+            
+            <TabsContent value="business-requirements" className="h-full mt-0">
+              <BusinessRequirementsTab meetingId={meetingId} />
             </TabsContent>
             
             <TabsContent value="documents" className="h-full mt-0">
