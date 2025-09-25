@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Calendar, Users, Clock, Video, CheckCircle, AlertCircle, ChevronRight } from "lucide-react";
+import logo from "@/assets/logo.png";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -99,8 +100,8 @@ export function AppSidebar({ selectedMeetingId, onMeetingSelect }: AppSidebarPro
     <Sidebar collapsible="icon">
       <SidebarHeader className="p-6 border-b border-border">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600">
-            <Video className="h-6 w-6 text-white" />
+          <div className="p-2 rounded-lg bg-white border border-border">
+            <img src={logo} alt="Project Comms Logo" className="h-6 w-6" />
           </div>
           {!isCollapsed && (
             <div>
